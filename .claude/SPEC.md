@@ -1,9 +1,41 @@
 # Functional Spec & Technical Architecture
 
-## 1. System Components
-- **Popup UI:** The control center (Template selection, Date picker, Preview).
-- **Content Script:** Injected into Jira tabs to access DOM (current URL, accountId).
-- **Service Worker:** Handles long-running API calls if necessary (though Popup can handle most).
+## 1. System Components & Project Structure
+
+```text
+src/
+├── background/
+│   └── index.js            # Service worker (Manifest V3 required)
+├── content/
+│   └── index.js            # Injected into Jira tabs (grab accountId, domain)
+├── popup/
+│   ├── App.jsx             # Root popup component
+│   ├── index.jsx           # Entry point (ReactDOM.render)
+│   ├── index.html          # Popup HTML shell
+│   └── components/
+│       ├── ReportPreview.jsx
+│       ├── TemplateSelector.jsx
+│       ├── DatePicker.jsx
+│       └── Settings.jsx
+├── services/
+│   ├── jira.js             # JiraService (fetch worklogs, JQL search)
+│   ├── gemini.js           # GeminiService (AI formatting)
+│   ├── storage.js          # chrome.storage.sync wrapper
+│   └── report-engine.js    # ReportEngine (orchestrates Jira→AI pipeline)
+├── hooks/
+│   └── useReport.js        # React hook wrapping ReportEngine
+└── utils/
+    ├── date.js             # DateHelper (target date calc)
+    └── progress.js         # Progress % calculation
+```
+
+### Component Roles
+- **`popup/`** — The only React surface. Control center (Template selection, Date picker, Preview).
+- **`content/`** — Injected into Jira tabs to access DOM (current URL, accountId).
+- **`background/`** — Service worker for long-running API calls (Manifest V3 required).
+- **`services/`** — Service layer pattern. Each service is a class with static methods.
+- **`hooks/`** — Thin layer wiring services into React state. Think "controller".
+- **`utils/`** — Pure functions (DateHelper, progress calc). No side effects, testable in isolation.
 
 ## 2. Data Fetching Logic (Jira API)
 

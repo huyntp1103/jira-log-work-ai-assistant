@@ -23,6 +23,16 @@ It bridges the gap between Jira activity (worklogs/sprints) and communication pl
 - **Multi-Platform Support:** Toggle between Slack (Markdown/Emoji) and Spreadsheet (Plain text/Single cell) formats.
 - **Frictionless UX:** 1-click generation, auto-copy to clipboard.
 
+## Project Layout
+
+- **`src/services/`** — Service layer (Jira, Gemini, Storage, ReportEngine).
+- **`src/popup/`** — React UI (the only React surface).
+- **`src/hooks/`** — Thin React hooks wiring services to state.
+- **`src/utils/`** — Pure helper functions (date, progress calc).
+- **`src/content/`** — Content script injected into Jira tabs.
+- **`src/background/`** — Manifest V3 service worker.
+- See `SPEC.md` for full structure and file-level details.
+
 ## Security & Privacy
 - **No Hardcoded Keys:** Users must provide their own Gemini API Key. Stored in `.env` (gitignored).
 - **Domain Scoping:** Permissions limited to `*.atlassian.net` and `generativelanguage.googleapis.com`.
