@@ -1,0 +1,9 @@
+# Environment variables
+.env
+.env.*
+
+# Node
+node_modules/
+
+# OS files
+.DS_Store
