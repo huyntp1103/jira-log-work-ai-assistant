@@ -5,5 +5,10 @@
 # Node
 node_modules/
 
+# Build output
+dist/
+*.crx
+*.pem
+
 # OS files
 .DS_Store
