@@ -27,7 +27,7 @@ export default function App() {
   if (view === 'settings') {
     return (
       <div className="w-[420px] min-h-[480px] bg-slate-50">
-        <div className="bg-teal-600 px-5 py-3.5">
+        <div className="bg-gradient-to-r from-violet-600 to-blue-500 px-5 py-3.5">
           <h1 className="text-white text-sm font-semibold">Settings</h1>
         </div>
         <div className="p-4">
@@ -40,14 +40,14 @@ export default function App() {
   return (
     <div className="w-[420px] min-h-[480px] bg-slate-50">
       {/* Header */}
-      <div className="bg-teal-600 px-5 py-3.5 flex items-center justify-between">
+      <div className="bg-gradient-to-r from-violet-600 to-blue-500 px-5 py-3.5 flex items-center justify-between">
         <div>
           <h1 className="text-white text-sm font-semibold">Jira Report Assistant</h1>
-          <p className="text-teal-100 text-[11px] mt-0.5">AI-powered daily reports</p>
+          <p className="text-blue-100 text-[11px] mt-0.5">AI-powered daily reports</p>
         </div>
         <button
           onClick={() => setView('settings')}
-          className="p-1.5 rounded text-teal-200 hover:text-white hover:bg-teal-500 transition-colors"
+          className="p-1.5 rounded text-blue-200 hover:text-white hover:bg-white/15 transition-colors"
           aria-label="Settings"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -68,7 +68,7 @@ export default function App() {
         <button
           onClick={handleGenerate}
           disabled={loading || !templateId}
-          className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
           {loading ? (
             <>

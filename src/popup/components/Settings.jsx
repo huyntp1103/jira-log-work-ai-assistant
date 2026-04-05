@@ -65,7 +65,7 @@ export default function Settings({ onBack }) {
             value={settings.geminiKey}
             onChange={(e) => setSettings({ ...settings, geminiKey: e.target.value })}
             placeholder="AIza..."
-            className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <button
             onClick={() => setShowKey(!showKey)}
@@ -88,7 +88,7 @@ export default function Settings({ onBack }) {
             type="text"
             value={settings.spField}
             onChange={(e) => setSettings({ ...settings, spField: e.target.value })}
-            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <div>
@@ -101,7 +101,7 @@ export default function Settings({ onBack }) {
             min="1"
             value={settings.hoursPerPoint}
             onChange={(e) => setSettings({ ...settings, hoursPerPoint: Number(e.target.value) })}
-            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>
@@ -117,7 +117,7 @@ export default function Settings({ onBack }) {
         <button
           onClick={handleSave}
           className={`flex-[2] py-2.5 rounded-lg text-[13px] font-semibold text-white active:scale-[0.98] transition-all ${
-            saved ? 'bg-green-600' : 'bg-teal-600 hover:bg-teal-700'
+            saved ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
           {saved ? 'Saved!' : 'Save Settings'}

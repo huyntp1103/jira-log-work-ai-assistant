@@ -45,7 +45,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
           id="template-select"
           value={selectedId || ''}
           onChange={(e) => onSelect(e.target.value)}
-          className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           {templates.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
@@ -55,7 +55,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
           onClick={() => { setEditing(null); setShowEditor(!showEditor); }}
           className={`px-2.5 py-2 rounded border text-[11px] font-medium transition-colors ${
             showEditor
-              ? 'text-teal-600 border-teal-300 bg-teal-50'
+              ? 'text-violet-600 border-violet-300 bg-violet-50'
               : 'text-slate-500 border-slate-200 hover:bg-slate-50'
           }`}
           aria-label="Edit templates"
@@ -72,7 +72,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
                 <div key={t.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-slate-50 text-[13px]">
                   <span className="text-slate-700 truncate">{t.name}</span>
                   <div className="flex gap-2 shrink-0 ml-2">
-                    <button onClick={() => onEdit(t)} className="text-teal-600 text-[11px] font-medium hover:underline">Edit</button>
+                    <button onClick={() => setEditing(t)} className="text-blue-600 text-[11px] font-medium hover:underline">Edit</button>
                     {!t.isDefault && (
                       <button onClick={() => handleDelete(t.id)} className="text-red-500 text-[11px] font-medium hover:underline">Delete</button>
                     )}
@@ -81,7 +81,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
               ))}
               <button
                 onClick={() => setEditing({ id: null, name: '', format: '', instruction: '', isDefault: false })}
-                className="w-full py-1.5 text-[11px] font-medium text-teal-600 border border-dashed border-teal-300 rounded hover:bg-teal-50 transition-colors"
+                className="w-full py-1.5 text-[11px] font-medium text-violet-600 border border-dashed border-violet-300 rounded hover:bg-violet-50 transition-colors"
               >
                 + New Template
               </button>
@@ -92,7 +92,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
                 <label htmlFor="tpl-name" className="block text-[11px] font-medium text-slate-500 mb-1">Name</label>
                 <input id="tpl-name" type="text" value={editing.name || ''}
                   onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                  className="w-full px-2.5 py-1.5 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full px-2.5 py-1.5 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -100,7 +100,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
                 <textarea id="tpl-format" rows={3} value={editing.format || ''}
                   onChange={(e) => setEditing({ ...editing, format: e.target.value })}
                   placeholder="Describe how you want the report formatted..."
-                  className="w-full px-2.5 py-1.5 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full px-2.5 py-1.5 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="flex gap-2">
@@ -115,7 +115,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
                       isDefault: editing.isDefault || false,
                     });
                   }}
-                  className="flex-1 py-1.5 rounded text-[11px] font-semibold text-white bg-teal-600 hover:bg-teal-700 active:scale-[0.98] transition-all"
+                  className="flex-1 py-1.5 rounded text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition-all"
                 >
                   Save
                 </button>
