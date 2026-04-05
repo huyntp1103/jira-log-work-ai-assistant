@@ -32,20 +32,23 @@
 
 ## 4. Design System
 
-### Color Palette (Productivity Tool)
-| Token | Value | Usage |
-|---|---|---|
-| Primary | `#0D9488` (Teal) | Brand, focus elements |
-| On Primary | `#FFFFFF` | Text on primary |
-| Secondary | `#14B8A6` | Secondary actions |
-| Accent | `#EA580C` (Orange) | CTA buttons (Generate, Copy) |
-| Background | `#F0FDFA` | Page background |
-| Foreground | `#134E4A` | Primary text |
-| Card | `#FFFFFF` | Card/panel backgrounds |
-| Muted | `#64748B` | Secondary text, placeholders |
-| Border | `#99F6E4` | Borders, dividers |
-| Destructive | `#DC2626` | Errors, destructive actions |
-| Ring | `#0D9488` | Focus rings |
+### Color Palette (Everfit Brand)
+
+Uses standard Tailwind colors matching the Everfit logo gradient (purple → blue):
+
+- **Header:** `bg-gradient-to-r from-violet-600 to-blue-500` (Everfit logo gradient)
+- **Generate button:** `bg-blue-600` (primary CTA)
+- **Copy button:** `bg-violet-600` (secondary CTA)
+- **Save button:** `bg-blue-600`
+- **Success state:** `bg-green-600` ("Saved!", "Copied!")
+- **Focus rings:** `ring-blue-500`
+- **Background:** `bg-slate-50`
+- **Cards:** `bg-white border-slate-200`
+- **Inputs:** `bg-slate-50 border-slate-200`
+- **Primary text:** `text-slate-800`
+- **Secondary text:** `text-slate-500`
+- **Error:** `bg-red-50 text-red-700 border-red-200`
+- **Edit active:** `text-violet-600 bg-violet-50`
 
 ### Typography
 - **Font:** Inter (single family, weight variations) — clean, minimal, WCAG-friendly.
@@ -57,7 +60,7 @@
 ### Interaction Guidelines
 - **Touch targets:** min 44x44px, min 8px gap between adjacent targets.
 - **Micro-interactions:** 150–300ms duration, ease-out for enter / ease-in for exit.
-- **Focus states:** Visible focus ring (`ring-2 ring-teal-500`) on all interactive elements.
+- **Focus states:** Visible focus ring (`ring-2 ring-blue-500`) on all interactive elements.
 - **Hover states:** Subtle bg change + cursor-pointer on clickable elements.
 - **Active states:** `active:scale-95` press feedback.
 - **Disabled states:** `opacity-50 cursor-not-allowed`.

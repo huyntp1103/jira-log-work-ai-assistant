@@ -13,7 +13,7 @@ It bridges the gap between Jira activity (worklogs/sprints) and communication pl
 - **Build Tool:** Vite + @crxjs/vite-plugin (Fast bundling, HMR support).
 - **Frontend:** React + Tailwind CSS (Modern, responsive Popup UI).
 - **State/Storage:** `chrome.storage.sync` (Persist settings & templates across devices).
-- **AI Engine:** Gemini API (Model: `gemini-1.5-flash` — high speed, generous free-tier quota).
+- **AI Engine:** Gemini API (Model: `gemini-2.5-flash` — high speed, generous free-tier quota).
 - **Language:** JavaScript (ES6+) / TypeScript.
 
 ## Core Requirements
@@ -34,5 +34,5 @@ It bridges the gap between Jira activity (worklogs/sprints) and communication pl
 - See `SPEC.md` for full structure and file-level details.
 
 ## Security & Privacy
-- **No Hardcoded Keys:** Users must provide their own Gemini API Key. Stored in `.env` (gitignored).
+- **No Hardcoded Keys:** Users must provide their own Gemini API Key via the Settings UI (stored in `chrome.storage.sync`).
 - **Domain Scoping:** Permissions limited to `*.atlassian.net` and `generativelanguage.googleapis.com`.
