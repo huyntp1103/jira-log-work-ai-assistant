@@ -47,16 +47,16 @@ async function handleGenerateReport({ date, templateId }) {
   const targetDate = DateHelper.getTargetDate(baseDate);
   console.log('[BG] Target date:', targetDate);
 
-  // Step 1: Fetch user ID
-  console.log('[BG] Step 1: Fetching user ID...');
-  const myId = await JiraService.getMyId(domain);
-  console.log('[BG] User ID:', myId);
+  // Step 1: Fetch user profile
+  console.log('[BG] Step 1: Fetching user profile...');
+  const profile = await JiraService.getMyProfile(domain);
+  console.log('[BG] User:', profile.displayName);
 
   // Step 2: Fetch and categorize Jira data
   console.log('[BG] Step 2: Fetching Jira data...');
   const engine = new ReportEngine({
     domain,
-    myId,
+    myId: profile.accountId,
     targetDate,
     baseDate,
     spField: settings.spField,
@@ -70,7 +70,12 @@ async function handleGenerateReport({ date, templateId }) {
   const formattedText = await GeminiService.generateReport(
     report,
     settings.geminiKey,
-    template.instruction
+    template.instruction,
+    {
+      displayName: profile.displayName,
+      platform: template.name.split(/\s/)[0],
+      targetDate: date || DateHelper.formatDate(new Date()),
+    }
   );
   console.log('[BG] Gemini response received, length:', formattedText.length);
 

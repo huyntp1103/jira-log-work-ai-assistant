@@ -1,4 +1,4 @@
-const MODEL = 'gemini-2.5-flash-lite';
+const MODEL = 'gemini-2.5-flash';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 export class GeminiService {
@@ -7,11 +7,21 @@ export class GeminiService {
    * @param {object} jsonData - Categorized report data from ReportEngine
    * @param {string} apiKey - Gemini API key
    * @param {string} systemInstruction - Template instruction text
-   * @returns {string} Formatted report text
+   * @param {object} context - Additional context for the report
+   * @param {string} context.displayName - User's display name from Jira
+   * @param {string} context.platform - Platform derived from template name (e.g. "Backend")
+   * @param {string} context.targetDate - Report date (YYYY-MM-DD)
    */
-  static async generateReport(jsonData, apiKey, systemInstruction) {
+  static async generateReport(jsonData, apiKey, systemInstruction, context = {}) {
     const url = `${API_URL}?key=${apiKey}`;
-    const prompt = `Please generate a Daily Report based on this JSON data: ${JSON.stringify(jsonData)}`;
+
+    const contextLine = [
+      context.displayName && `Reporter Name: ${context.displayName}`,
+      context.platform && `Platform/Role: ${context.platform}`,
+      context.targetDate && `Report Date: ${context.targetDate}`,
+    ].filter(Boolean).join('\n');
+
+    const prompt = `${contextLine ? contextLine + '\n\n' : ''}Please generate a Daily Report based on this JSON data: ${JSON.stringify(jsonData)}`;
 
     const body = {
       system_instruction: {

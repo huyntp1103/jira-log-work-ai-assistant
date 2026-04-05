@@ -19,9 +19,12 @@ export class JiraService {
     return res.json();
   }
 
-  static async getMyId(domain) {
+  static async getMyProfile(domain) {
     const user = await this.fetchJira(domain, '/rest/api/3/myself');
-    return user.accountId;
+    return {
+      accountId: user.accountId,
+      displayName: (user.displayName || 'Unknown').split('(')[0].trim(),
+    };
   }
 
   static async searchJql(domain, jql, fields = []) {

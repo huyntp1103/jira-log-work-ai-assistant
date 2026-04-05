@@ -1,6 +1,6 @@
 import { JiraService } from './jira.js';
 import { DateHelper } from '../utils/date.js';
-import { calculateProgress } from '../utils/progress.js';
+import { calculateProgress, currentProgress } from '../utils/progress.js';
 
 export class ReportEngine {
   /**
@@ -73,19 +73,24 @@ export class ReportEngine {
         Title: issue.fields.summary,
         ParentSummary: getParentSummary(issue),
         Time: (secondsOnTarget / 3600).toFixed(2) + 'h',
-        Progress: calculateProgress(totalSpentSeconds, secondsOnTarget, sp, this.hoursPerPoint),
+        Progress: calculateProgress(totalSpentSeconds, secondsOnTarget, sp, this.hoursPerPoint, issue.fields.status.name),
         Status: issue.fields.status.name,
       });
     });
 
     planData.issues.forEach((issue) => {
       if (!loggedIssueKeys.has(issue.key)) {
+        const sp = issue.fields[this.spField] || 0;
+        const totalSpentSeconds = issue.fields.timetracking?.timeSpentSeconds || 0;
+        const status = issue.fields.status.name;
+
         this.report['Plan for Today'].push({
           TaskLink: `https://${this.domain}/browse/${issue.key}`,
           Title: issue.fields.summary,
           ParentSummary: getParentSummary(issue),
-          Status: issue.fields.status.name,
-          SP: issue.fields[this.spField] || 0,
+          Status: status,
+          SP: sp,
+          Progress: currentProgress(totalSpentSeconds, sp, this.hoursPerPoint, status) + '%',
         });
       }
     });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StorageService } from '../../services/storage.js';
+import { StorageService, buildInstruction } from '../../services/storage.js';
 
 export default function TemplateSelector({ selectedId, onSelect }) {
   const [templates, setTemplates] = useState([]);
@@ -111,7 +111,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
                       id: editing.id || `tpl-${Date.now()}`,
                       name: editing.name.trim(),
                       format: (editing.format || '').trim(),
-                      instruction: (editing.format || '').trim(),
+                      instruction: buildInstruction((editing.format || '').trim()),
                       isDefault: editing.isDefault || false,
                     });
                   }}
