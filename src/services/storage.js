@@ -13,7 +13,7 @@ DONE YESTERDAY
 [ParentSummary]
   • [Task Link]: [Task Title]
     ◦ Progress: 100% (or X%)
-    ◦ Remaining: [If < 100%, describe specific remaining actions]
+    ◦ Remaining: [If < 100%, describe specific remaining actions, otherwise omit this line]
 
 PROGRESS CHANGED
 [ParentSummary]
@@ -59,7 +59,8 @@ PROGRESS CHANGED: Use for ongoing tasks that showed a percentage increase yester
 Reason must be written in professional technical English (e.g., "Implemented base logic for API", "Optimized database queries", "Fixed staging bugs").
 
 PLAN FOR TODAY: Use for tasks currently in "In Progress", "In Review", or "QA FAILED" status that were not completed yesterday.
-Progress estimation: Calculate "Estimated % by EOD" by adding 1.5 SP worth of progress to current %. For "Full task done" date, calculate remaining SP, divide by 1.5 SP/day (skip weekends), and add to the Report Date. Always show a concrete date (e.g., "7 Apr 2026"), never leave placeholders.
+CRITICAL: The "Progress" field in the JSON data is the EXACT current progress. You MUST use it as-is in "[X% by EOD]" — do NOT recalculate or override it. For example, if Progress is "50%", output "Progress: 50% by EOD".
+Full task done: Calculate remaining progress to 100%, convert to remaining SP, divide by 1.5 SP/day (skip weekends), and add to the Report Date. Always show a concrete date (e.g., "7 Apr 2026"), never leave placeholders.
 AI field: Automatically suggest actions like: "Solution design, implementation plan, generate code, review code".
 
 Grouping: Always group multiple sub-tasks under their respective Parent/Epic item to avoid redundancy.
