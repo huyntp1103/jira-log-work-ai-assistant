@@ -4,7 +4,7 @@ const DEFAULT_SETTINGS = {
   hoursPerPoint: 4,
 };
 
-const DEFAULT_FORMAT = `DAILY REPORT — [Use the Report Date provided by the user, formatted as "D Mon YYYY"]
+export const DEFAULT_FORMAT = `DAILY REPORT — [Use the Report Date provided by the user, formatted as "D Mon YYYY"]
 Name: [Use the displayName provided by the user]
 Platform: [Use the Platform/Role provided by the user]
 
@@ -122,7 +122,6 @@ const DEFAULT_TEMPLATES = [
     id: 'default-backend-core',
     name: 'Backend Core (Default)',
     format: DEFAULT_FORMAT,
-    instruction: buildInstruction(DEFAULT_FORMAT, 'Backend'),
     isDefault: true,
   },
 ];

@@ -1,4 +1,4 @@
-import { StorageService } from '../services/storage.js';
+import { StorageService, buildInstruction } from '../services/storage.js';
 import { JiraService } from '../services/jira.js';
 import { GeminiService } from '../services/gemini.js';
 import { ReportEngine } from '../services/report-engine.js';
@@ -70,7 +70,7 @@ async function handleGenerateReport({ date, templateId }) {
   const formattedText = await GeminiService.generateReport(
     report,
     settings.geminiKey,
-    template.instruction,
+    buildInstruction(template.format, template.name.split(/\s/)[0]),
     {
       displayName: profile.displayName,
       platform: template.name.split(/\s/)[0],

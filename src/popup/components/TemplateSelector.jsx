@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StorageService, buildInstruction } from '../../services/storage.js';
+import { StorageService, DEFAULT_FORMAT } from '../../services/storage.js';
 
 export default function TemplateSelector({ selectedId, onSelect }) {
   const [templates, setTemplates] = useState([]);
@@ -26,6 +26,13 @@ export default function TemplateSelector({ selectedId, onSelect }) {
     await StorageService.saveTemplates(updated);
     setEditing(null);
     setShowEditor(false);
+  };
+
+  const handleSetDefault = async (id) => {
+    const updated = templates.map((t) => ({ ...t, isDefault: t.id === id }));
+    setTemplates(updated);
+    await StorageService.saveTemplates(updated);
+    onSelect(id);
   };
 
   const handleDelete = async (id) => {
@@ -70,8 +77,14 @@ export default function TemplateSelector({ selectedId, onSelect }) {
             <>
               {templates.map((t) => (
                 <div key={t.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-slate-50 text-[13px]">
-                  <span className="text-slate-700 truncate">{t.name}</span>
+                  <span className="text-slate-700 truncate flex items-center gap-1.5">
+                    {t.name}
+                    {t.isDefault && <span className="text-[9px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full">Default</span>}
+                  </span>
                   <div className="flex gap-2 shrink-0 ml-2">
+                    {!t.isDefault && (
+                      <button onClick={() => handleSetDefault(t.id)} className="text-slate-400 text-[11px] font-medium hover:text-violet-600 hover:underline">Set default</button>
+                    )}
                     <button onClick={() => setEditing(t)} className="text-blue-600 text-[11px] font-medium hover:underline">Edit</button>
                     {!t.isDefault && (
                       <button onClick={() => handleDelete(t.id)} className="text-red-500 text-[11px] font-medium hover:underline">Delete</button>
@@ -80,7 +93,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
                 </div>
               ))}
               <button
-                onClick={() => setEditing({ id: null, name: '', format: '', instruction: '', isDefault: false })}
+                onClick={() => setEditing({ id: null, name: '', format: DEFAULT_FORMAT, instruction: '', isDefault: false })}
                 className="w-full py-1.5 text-[11px] font-medium text-violet-600 border border-dashed border-violet-300 rounded hover:bg-violet-50 transition-colors"
               >
                 + New Template
@@ -97,7 +110,7 @@ export default function TemplateSelector({ selectedId, onSelect }) {
               </div>
               <div>
                 <label htmlFor="tpl-format" className="block text-[11px] font-medium text-slate-500 mb-1">Desired Format</label>
-                <textarea id="tpl-format" rows={3} value={editing.format || ''}
+                <textarea id="tpl-format" rows={5} value={editing.format || ''}
                   onChange={(e) => setEditing({ ...editing, format: e.target.value })}
                   placeholder="Describe how you want the report formatted..."
                   className="w-full px-2.5 py-1.5 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -107,14 +120,10 @@ export default function TemplateSelector({ selectedId, onSelect }) {
                 <button
                   onClick={() => {
                     if (!editing.name?.trim()) return;
-                    const name = editing.name.trim();
-                    const format = (editing.format || '').trim();
-                    const platform = name.split(/\s/)[0];
                     handleSave({
                       id: editing.id || `tpl-${Date.now()}`,
-                      name,
-                      format,
-                      instruction: buildInstruction(format, platform),
+                      name: editing.name.trim(),
+                      format: (editing.format || '').trim(),
                       isDefault: editing.isDefault || false,
                     });
                   }}
