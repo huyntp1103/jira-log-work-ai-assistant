@@ -12,12 +12,20 @@ export function useReport() {
     setReport(null);
     setFormattedText('');
 
+    console.log('[Popup] Sending GENERATE_REPORT:', { date, templateId });
+
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'GENERATE_REPORT',
         date,
         templateId,
       });
+
+      console.log('[Popup] Response received:', response);
+
+      if (!response) {
+        throw new Error('No response from background script. Service worker may not be running.');
+      }
 
       if (response.type === 'REPORT_ERROR') {
         throw new Error(response.error);
@@ -26,6 +34,7 @@ export function useReport() {
       setReport(response.report);
       setFormattedText(response.formattedText);
     } catch (err) {
+      console.error('[Popup] Error:', err);
       setError(err.message);
     } finally {
       setLoading(false);

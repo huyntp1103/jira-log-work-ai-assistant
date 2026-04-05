@@ -13,12 +13,12 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="w-[400px] min-h-[200px] bg-background text-foreground p-4 font-sans">
-          <h2 className="text-destructive text-lg font-bold mb-2">Something went wrong</h2>
-          <p className="text-sm text-muted mb-3">{this.state.error?.message}</p>
+        <div className="w-[420px] p-6 bg-slate-50">
+          <h2 className="text-red-600 text-sm font-bold mb-2">Something went wrong</h2>
+          <p className="text-[13px] text-slate-600 mb-3">{this.state.error?.message}</p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-on-primary bg-primary hover:bg-secondary active:scale-95 transition-all duration-200"
+            className="px-4 py-2 rounded-lg text-[13px] font-medium text-white bg-teal-600 hover:bg-teal-700 active:scale-[0.98] transition-all"
           >
             Try Again
           </button>

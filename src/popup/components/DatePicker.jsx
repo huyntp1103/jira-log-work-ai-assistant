@@ -6,8 +6,8 @@ export default function DatePicker({ value, onChange }) {
 
   return (
     <div>
-      <label htmlFor="report-date" className="block text-sm font-medium text-foreground mb-1">
-        Date
+      <label htmlFor="report-date" className="block text-[11px] font-medium text-slate-500 mb-1">
+        Report Date
       </label>
       <input
         id="report-date"
@@ -15,7 +15,7 @@ export default function DatePicker({ value, onChange }) {
         value={value || today}
         max={today}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
       />
     </div>
   );
