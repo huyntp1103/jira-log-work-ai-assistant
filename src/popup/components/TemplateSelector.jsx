@@ -107,11 +107,14 @@ export default function TemplateSelector({ selectedId, onSelect }) {
                 <button
                   onClick={() => {
                     if (!editing.name?.trim()) return;
+                    const name = editing.name.trim();
+                    const format = (editing.format || '').trim();
+                    const platform = name.split(/\s/)[0];
                     handleSave({
                       id: editing.id || `tpl-${Date.now()}`,
-                      name: editing.name.trim(),
-                      format: (editing.format || '').trim(),
-                      instruction: buildInstruction((editing.format || '').trim()),
+                      name,
+                      format,
+                      instruction: buildInstruction(format, platform),
                       isDefault: editing.isDefault || false,
                     });
                   }}
