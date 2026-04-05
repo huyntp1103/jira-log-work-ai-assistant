@@ -89,7 +89,7 @@ export class ReportEngine {
         });
       }
     });
-
+    console.log('Generated report data:', this.report);
     return this.report;
   }
 }

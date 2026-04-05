@@ -4,12 +4,22 @@ import { GeminiService } from '../services/gemini.js';
 import { ReportEngine } from '../services/report-engine.js';
 import { DateHelper } from '../utils/date.js';
 
+console.log('[BG] Service worker started');
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('[BG] Message received:', message.type);
+
   if (message.type === 'GENERATE_REPORT') {
     handleGenerateReport(message)
-      .then((result) => sendResponse({ type: 'REPORT_RESULT', ...result }))
-      .catch((error) => sendResponse({ type: 'REPORT_ERROR', error: error.message }));
-    return true; // Keep message channel open for async response
+      .then((result) => {
+        console.log('[BG] Report generated successfully');
+        sendResponse({ type: 'REPORT_RESULT', ...result });
+      })
+      .catch((error) => {
+        console.error('[BG] Report generation failed:', error);
+        sendResponse({ type: 'REPORT_ERROR', error: error.message });
+      });
+    return true;
   }
 
   if (message.type === 'TEST_GEMINI') {
@@ -25,6 +35,8 @@ async function handleGenerateReport({ date, templateId }) {
   const templates = await StorageService.getTemplates();
   const domain = await StorageService.getJiraDomain();
 
+  console.log('[BG] Config:', { domain, hasKey: !!settings.geminiKey, templateId });
+
   if (!domain) throw new Error('Please open a Jira tab first so the extension can detect your domain.');
   if (!settings.geminiKey) throw new Error('Please enter your Gemini API key in Settings.');
 
@@ -33,9 +45,15 @@ async function handleGenerateReport({ date, templateId }) {
 
   const baseDate = date ? new Date(date + 'T00:00:00') : new Date();
   const targetDate = DateHelper.getTargetDate(baseDate);
+  console.log('[BG] Target date:', targetDate);
 
-  // Step 1: Fetch and categorize Jira data
+  // Step 1: Fetch user ID
+  console.log('[BG] Step 1: Fetching user ID...');
   const myId = await JiraService.getMyId(domain);
+  console.log('[BG] User ID:', myId);
+
+  // Step 2: Fetch and categorize Jira data
+  console.log('[BG] Step 2: Fetching Jira data...');
   const engine = new ReportEngine({
     domain,
     myId,
@@ -45,13 +63,16 @@ async function handleGenerateReport({ date, templateId }) {
     hoursPerPoint: settings.hoursPerPoint,
   });
   const report = await engine.generate();
+  console.log('[BG] Report data:', JSON.stringify(report).substring(0, 200));
 
-  // Step 2: Format with Gemini AI
+  // Step 3: Format with Gemini AI
+  console.log('[BG] Step 3: Sending to Gemini...');
   const formattedText = await GeminiService.generateReport(
     report,
     settings.geminiKey,
     template.instruction
   );
+  console.log('[BG] Gemini response received, length:', formattedText.length);
 
   return { report, formattedText };
 }

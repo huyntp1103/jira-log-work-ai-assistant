@@ -3,7 +3,7 @@
   "name": "Jira Daily Report AI Assistant",
   "version": "1.0.0",
   "description": "AI-powered daily report generator from Jira worklogs",
-  "permissions": ["storage", "activeTab, tabs"],
+  "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "https://*.atlassian.net/*",
     "https://generativelanguage.googleapis.com/*"
@@ -17,13 +17,13 @@
     }
   },
   "background": {
-    "service_worker": "src/background/index.js",
+    "service_worker": "src/background/worker.js",
     "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["https://*.atlassian.net/*"],
-      "js": ["src/content/index.js"]
+      "js": ["src/content/main.js"]
     }
   ]
 }

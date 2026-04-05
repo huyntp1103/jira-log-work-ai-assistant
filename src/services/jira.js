@@ -3,6 +3,7 @@ export class JiraService {
     const url = `https://${domain}${endpoint}`;
     const options = {
       method,
+      credentials: 'include',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
