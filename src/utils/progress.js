@@ -41,11 +41,16 @@ export function calculateProgress(totalSpentSeconds, secondsOnTarget, storyPoint
   const rawPrev = ((totalSpent - (secondsOnTarget / 3600)) / goal) * 100;
   const isDone = DONE_STATUSES.includes(status);
 
-  // prev always uses 90% cap (before today's work, task wasn't in done status yet)
+  if (isDone) {
+    // For done statuses: current is always 100%, prev scaled independently with 90% cap
+    const prev = scaleWithCap(rawPrev, rawPrev, 90);
+    return `${prev}% ➔ 100%`;
+  }
+
+  // For other statuses: both scaled with same ratio using 90% cap
   const rawMax = Math.max(rawCurrent, rawPrev);
   const prev = scaleWithCap(rawPrev, rawMax, 90);
-  // current is 100% for done statuses, 90%-capped otherwise
-  const current = isDone ? 100 : scaleWithCap(rawCurrent, rawMax, 90);
+  const current = scaleWithCap(rawCurrent, rawMax, 90);
 
   return `${prev}% ➔ ${current}%`;
 }

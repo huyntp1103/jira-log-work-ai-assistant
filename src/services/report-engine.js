@@ -65,7 +65,8 @@ export class ReportEngine {
       const secondsOnTarget = targetLogs.reduce((acc, l) => acc + l.timeSpentSeconds, 0);
       const category = hasLoggedBefore ? 'Progress Changed' : 'Done Yesterday';
 
-      const totalSpentSeconds = issue.fields.timetracking?.timeSpentSeconds || 0;
+      // Use only MY worklogs for progress, not all users' (QA may also log time)
+      const totalSpentSeconds = myLogs.reduce((acc, l) => acc + l.timeSpentSeconds, 0);
       const sp = issue.fields[this.spField] || 0;
 
       this.report[category].push({
@@ -81,7 +82,10 @@ export class ReportEngine {
     planData.issues.forEach((issue) => {
       if (!loggedIssueKeys.has(issue.key)) {
         const sp = issue.fields[this.spField] || 0;
-        const totalSpentSeconds = issue.fields.timetracking?.timeSpentSeconds || 0;
+        const worklogs = issue.fields.worklog?.worklogs || [];
+        const myTotalSpent = worklogs
+          .filter((l) => l.author.accountId === this.myId)
+          .reduce((acc, l) => acc + l.timeSpentSeconds, 0);
         const status = issue.fields.status.name;
 
         this.report['Plan for Today'].push({
@@ -90,7 +94,7 @@ export class ReportEngine {
           ParentSummary: getParentSummary(issue),
           Status: status,
           SP: sp,
-          Progress: currentProgress(totalSpentSeconds, sp, this.hoursPerPoint, status) + '%',
+          Progress: currentProgress(myTotalSpent, sp, this.hoursPerPoint, status) + '%',
         });
       }
     });
