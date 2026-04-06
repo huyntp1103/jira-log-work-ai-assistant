@@ -36,3 +36,7 @@ It bridges the gap between Jira activity (worklogs/sprints) and communication pl
 ## Security & Privacy
 - **No Hardcoded Keys:** Users must provide their own Gemini API Key via the Settings UI (stored in `chrome.storage.sync`).
 - **Domain Scoping:** Permissions limited to `*.atlassian.net` and `generativelanguage.googleapis.com`.
+
+## Development Rules
+
+- **No auto build:** Do not run `npm run build` after code changes. The user rebuilds manually.
