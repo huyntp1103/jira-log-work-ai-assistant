@@ -10,8 +10,9 @@
  * @param {string} status - Jira status name
  * @returns {number} Scaled and rounded progress percentage
  */
-function scaleProgress(raw, rawMax, status) {
-  const cap = status === 'QA READY' ? 100 : 90;
+const DONE_STATUSES = ['QA READY', 'QA Success'];
+
+function scaleWithCap(raw, rawMax, cap) {
   if (rawMax <= cap) return Math.round(Math.max(0, raw));
   const ratio = cap / rawMax;
   return Math.round(Math.max(0, raw * ratio));
@@ -19,8 +20,9 @@ function scaleProgress(raw, rawMax, status) {
 
 /**
  * Calculate progress change for an issue based on worklog time.
- * Both prev and current are scaled using the same ratio so the
- * relative change is preserved.
+ *
+ * For done statuses (QA READY, QA Success): current = 100%, prev scaled with 90% cap.
+ * For other statuses: both prev and current scaled with 90% cap.
  *
  * @param {number} totalSpentSeconds - Total time spent on the issue (seconds)
  * @param {number} secondsOnTarget - Time logged on the target date (seconds)
@@ -37,11 +39,13 @@ export function calculateProgress(totalSpentSeconds, secondsOnTarget, storyPoint
   const totalSpent = totalSpentSeconds / 3600;
   const rawCurrent = (totalSpent / goal) * 100;
   const rawPrev = ((totalSpent - (secondsOnTarget / 3600)) / goal) * 100;
+  const isDone = DONE_STATUSES.includes(status);
 
-  // Use the higher value (current) as rawMax so both scale with the same ratio
+  // prev always uses 90% cap (before today's work, task wasn't in done status yet)
   const rawMax = Math.max(rawCurrent, rawPrev);
-  const current = scaleProgress(rawCurrent, rawMax, status);
-  const prev = scaleProgress(rawPrev, rawMax, status);
+  const prev = scaleWithCap(rawPrev, rawMax, 90);
+  // current is 100% for done statuses, 90%-capped otherwise
+  const current = isDone ? 100 : scaleWithCap(rawCurrent, rawMax, 90);
 
   return `${prev}% ➔ ${current}%`;
 }
@@ -56,10 +60,11 @@ export function calculateProgress(totalSpentSeconds, secondsOnTarget, storyPoint
  * @returns {number} Scaled progress percentage
  */
 export function currentProgress(totalSpentSeconds, storyPoints, hoursPerPoint = 4, status = '') {
+  if (DONE_STATUSES.includes(status)) return 100;
   const sp = storyPoints || 0;
   const goal = sp * hoursPerPoint;
   if (goal === 0) return 0;
 
   const raw = (totalSpentSeconds / 3600 / goal) * 100;
-  return scaleProgress(raw, raw, status);
+  return scaleWithCap(raw, raw, 90);
 }

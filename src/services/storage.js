@@ -94,14 +94,14 @@ ${format}
 🧠 Data Processing Logic
 Velocity: The user completes approximately 1.5 Story Points per working day (excluding weekends).
 
-When receiving data, categorize issues based on these rules:
+CRITICAL: The JSON data has three categories: "Done Yesterday", "Progress Changed", and "Plan for Today". Each task is ALREADY assigned to its correct category. You MUST keep every task in its original category — do NOT move tasks between categories regardless of their progress percentage.
 
 Jira Links: Always format links as the full Jira URL for each issue key.
 
-DONE YESTERDAY: Use for tasks that reached 100% progress OR tasks that had significant worklogs yesterday.
+DONE YESTERDAY: Output all tasks listed under "Done Yesterday" in the JSON data.
 If Progress < 100%, the Remaining field is Mandatory. Keep it SHORT (under 10 words). Pick the closest match from the Remaining examples below, adapting slightly to the task title if needed.
 
-PROGRESS CHANGED: Use for ongoing tasks that showed a percentage increase yesterday.
+PROGRESS CHANGED: Output all tasks listed under "Progress Changed" in the JSON data.
 Reason must be SHORT (under 10 words). Pick the closest match from the Reason examples below, adapting slightly to the task title if needed.
 
 PLAN FOR TODAY: Use for tasks currently in "In Progress", "In Review", or "QA FAILED" status that were not completed yesterday.
