@@ -3,7 +3,7 @@ const DEFAULT_SETTINGS = {
   spField: 'customfield_10014',
   hoursPerPoint: 4,
   timeCommit: 3600,
-  timeApprove: 1200,
+  timeApprove: 900,
   timeComment: 900,
 };
 

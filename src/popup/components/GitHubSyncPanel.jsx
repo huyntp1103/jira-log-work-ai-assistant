@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 /**
  * Convert seconds to human-readable string: "1h 30m", "45m", "2h"
@@ -26,12 +26,16 @@ function parseTime(str) {
   return (h * 3600) + (m * 60);
 }
 
-export default function GitHubSyncPanel({ date }) {
+export default function GitHubSyncPanel({ date, autoFetch = false }) {
   const [rows, setRows] = useState(null); // null = not fetched yet
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncDone, setSyncDone] = useState(null); // number of worklogs created
+
+  useEffect(() => {
+    if (autoFetch) handlePreview();
+  }, []);
 
   const handlePreview = async () => {
     setLoading(true);
@@ -77,22 +81,16 @@ export default function GitHubSyncPanel({ date }) {
 
   return (
     <div className="space-y-3">
-      {/* Fetch button */}
-      <button
-        onClick={handlePreview}
-        disabled={loading || syncing}
-        className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-      >
-        {loading ? (
-          <>
-            <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            Fetching...
-          </>
-        ) : 'Fetch GitHub Activity'}
-      </button>
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center gap-2 py-4 text-[13px] text-slate-400">
+          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Fetching GitHub activity...
+        </div>
+      )}
 
       {/* Error */}
       {error && (

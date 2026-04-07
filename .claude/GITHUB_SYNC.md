@@ -22,7 +22,7 @@ Integrate GitHub user activity to automatically create Jira worklogs, eliminatin
 | Event Type         | Default Time |
 |--------------------|-------------|
 | Commit pushed      | 60 min      |
-| PR review approved | 20 min      |
+| PR review approved | 15 min      |
 | PR review comment  | 15 min      |
 
 ---

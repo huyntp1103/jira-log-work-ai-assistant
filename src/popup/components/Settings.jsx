@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../../services/storage.js';
+import TemplateSelector from './TemplateSelector.jsx';
 
 export default function Settings({ onBack }) {
   const [settings, setSettings] = useState({
@@ -7,7 +8,7 @@ export default function Settings({ onBack }) {
     spField: 'customfield_10014',
     hoursPerPoint: 4,
     timeCommit: 3600,
-    timeApprove: 1200,
+    timeApprove: 900,
     timeComment: 900,
   });
   const [github, setGithub] = useState({ githubToken: '', githubUsername: '' });
@@ -54,6 +55,12 @@ export default function Settings({ onBack }) {
 
   return (
     <div className="space-y-4">
+      {/* Templates */}
+      <div className="bg-white rounded-lg border border-slate-200 p-3.5">
+        <h3 className="text-[13px] font-semibold text-slate-800 mb-2.5">Templates</h3>
+        <TemplateSelector selectedId={null} onSelect={() => {}} />
+      </div>
+
       {/* API Key */}
       <div className="bg-white rounded-lg border border-slate-200 p-3.5 space-y-2.5">
         <div className="flex items-center justify-between">

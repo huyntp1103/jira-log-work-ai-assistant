@@ -115,7 +115,7 @@ export class GitHubService {
   }
 
   /**
-   * Check if a Jira ticket already has an [Everport-AI] worklog on targetDate.
+   * Check if a Jira ticket already has an [AI] worklog on targetDate.
    * @param {string} domain
    * @param {string} issueKey
    * @param {string} targetDate - YYYY-MM-DD
@@ -133,7 +133,7 @@ export class GitHubService {
       (l) =>
         l.author.accountId === myAccountId &&
         l.started.startsWith(targetDate) &&
-        (l.comment?.content?.[0]?.content?.[0]?.text || '').includes('[Everport-AI]')
+        (l.comment?.content?.[0]?.content?.[0]?.text || '').includes('[AI]')
     );
   }
 }

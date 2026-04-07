@@ -55,7 +55,9 @@ async function handleGenerateReport({ date, templateId }) {
   if (!domain) throw new Error('Please open a Jira tab first so the extension can detect your domain.');
   if (!settings.geminiKey) throw new Error('Please enter your Gemini API key in Settings.');
 
-  const template = templates.find((t) => t.id === templateId) || templates[0];
+  const template = templates.find((t) => t.id === templateId)
+    || templates.find((t) => t.isDefault)
+    || templates[0];
   if (!template) throw new Error('No template found. Please create one in Settings.');
 
   const baseDate = date ? new Date(date + 'T00:00:00') : new Date();

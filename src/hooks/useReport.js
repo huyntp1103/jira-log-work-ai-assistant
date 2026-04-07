@@ -6,19 +6,18 @@ export function useReport() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const generate = useCallback(async (date, templateId) => {
+  const generate = useCallback(async (date) => {
     setLoading(true);
     setError(null);
     setReport(null);
     setFormattedText('');
 
-    console.log('[Popup] Sending GENERATE_REPORT:', { date, templateId });
+    console.log('[Popup] Sending GENERATE_REPORT:', { date });
 
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'GENERATE_REPORT',
         date,
-        templateId,
       });
 
       console.log('[Popup] Response received:', response);
