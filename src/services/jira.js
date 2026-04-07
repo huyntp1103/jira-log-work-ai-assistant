@@ -34,4 +34,19 @@ export class JiraService {
       maxResults: 50,
     });
   }
+
+  static async createWorklog(domain, issueKey, { timeSpentSeconds, targetDate, description }) {
+    return this.fetchJira(domain, `/rest/api/3/issue/${issueKey}/worklog`, 'POST', {
+      timeSpentSeconds,
+      started: `${targetDate}T09:00:00.000+0700`,
+      comment: {
+        type: 'doc',
+        version: 1,
+        content: [{
+          type: 'paragraph',
+          content: [{ type: 'text', text: `[Everport-AI] ${description}` }],
+        }],
+      },
+    });
+  }
 }

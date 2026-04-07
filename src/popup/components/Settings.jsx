@@ -6,18 +6,32 @@ export default function Settings({ onBack }) {
     geminiKey: '',
     spField: 'customfield_10014',
     hoursPerPoint: 4,
+    timeCommit: 3600,
+    timeApprove: 1200,
+    timeComment: 900,
   });
+  const [github, setGithub] = useState({ githubToken: '', githubUsername: '' });
   const [showKey, setShowKey] = useState(false);
+  const [showPat, setShowPat] = useState(false);
   const [apiStatus, setApiStatus] = useState(null);
   const [apiError, setApiError] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    StorageService.getSettings().then(setSettings);
+    Promise.all([
+      StorageService.getSettings(),
+      StorageService.getGitHubCredentials(),
+    ]).then(([s, g]) => {
+      setSettings(s);
+      setGithub(g);
+    });
   }, []);
 
   const handleSave = async () => {
-    await StorageService.saveSettings(settings);
+    await Promise.all([
+      StorageService.saveSettings(settings),
+      StorageService.setGitHubCredentials(github),
+    ]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
 
@@ -103,6 +117,66 @@ export default function Settings({ onBack }) {
             onChange={(e) => setSettings({ ...settings, hoursPerPoint: Number(e.target.value) })}
             className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+        </div>
+      </div>
+
+      {/* GitHub Sync */}
+      <div className="bg-white rounded-lg border border-slate-200 p-3.5 space-y-2.5">
+        <h3 className="text-[13px] font-semibold text-slate-800">GitHub Sync</h3>
+        <div>
+          <label htmlFor="gh-username" className="block text-[11px] font-medium text-slate-500 mb-1">
+            GitHub Username
+          </label>
+          <input
+            id="gh-username"
+            type="text"
+            value={github.githubUsername}
+            onChange={(e) => setGithub({ ...github, githubUsername: e.target.value })}
+            placeholder="your-github-username"
+            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label htmlFor="gh-token" className="block text-[11px] font-medium text-slate-500 mb-1">
+            Personal Access Token (PAT)
+          </label>
+          <div className="flex gap-1.5">
+            <input
+              id="gh-token"
+              type={showPat ? 'text' : 'password'}
+              value={github.githubToken}
+              onChange={(e) => setGithub({ ...github, githubToken: e.target.value })}
+              placeholder="ghp_..."
+              className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <button
+              onClick={() => setShowPat(!showPat)}
+              className="px-2.5 py-2 text-[11px] font-medium text-slate-500 hover:text-slate-700 border border-slate-200 rounded hover:bg-slate-50 transition-colors"
+            >
+              {showPat ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </div>
+        <div>
+          <p className="text-[11px] font-medium text-slate-500 mb-1.5">Log Time (minutes)</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Commit', key: 'timeCommit' },
+              { label: 'PR Approved', key: 'timeApprove' },
+              { label: 'PR Comment', key: 'timeComment' },
+            ].map(({ label, key }) => (
+              <div key={key}>
+                <label className="block text-[10px] text-slate-400 mb-1">{label}</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={Math.round(settings[key] / 60)}
+                  onChange={(e) => setSettings({ ...settings, [key]: Number(e.target.value) * 60 })}
+                  className="w-full px-2 py-1.5 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

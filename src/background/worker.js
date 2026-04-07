@@ -2,6 +2,7 @@ import { StorageService, buildInstruction } from '../services/storage.js';
 import { JiraService } from '../services/jira.js';
 import { GeminiService } from '../services/gemini.js';
 import { ReportEngine } from '../services/report-engine.js';
+import { GitHubService } from '../services/github.js';
 import { DateHelper } from '../utils/date.js';
 
 console.log('[BG] Service worker started');
@@ -26,6 +27,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     GeminiService.testConnection(message.apiKey)
       .then(() => sendResponse({ success: true }))
       .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (message.type === 'GITHUB_SYNC_PREVIEW') {
+    handleGitHubSyncPreview(message)
+      .then((result) => sendResponse({ type: 'GITHUB_SYNC_DATA', ...result }))
+      .catch((error) => sendResponse({ type: 'GITHUB_SYNC_ERROR', error: error.message }));
+    return true;
+  }
+
+  if (message.type === 'GITHUB_SYNC_CONFIRM') {
+    handleGitHubSyncConfirm(message)
+      .then((result) => sendResponse({ type: 'GITHUB_SYNC_DONE', ...result }))
+      .catch((error) => sendResponse({ type: 'GITHUB_SYNC_ERROR', error: error.message }));
     return true;
   }
 });
@@ -80,4 +95,64 @@ async function handleGenerateReport({ date, templateId }) {
   console.log('[BG] Gemini response received, length:', formattedText.length);
 
   return { report, formattedText };
+}
+
+async function handleGitHubSyncPreview({ date }) {
+  const [settings, { githubToken, githubUsername }, domain] = await Promise.all([
+    StorageService.getSettings(),
+    StorageService.getGitHubCredentials(),
+    StorageService.getJiraDomain(),
+  ]);
+
+  if (!githubToken || !githubUsername) throw new Error('GitHub credentials not configured. Please add your username and PAT in Settings.');
+  if (!domain) throw new Error('Please open a Jira tab first so the extension can detect your domain.');
+
+  const targetDate = date || DateHelper.formatDate(new Date());
+  const timeConfig = {
+    timeCommit: settings.timeCommit,
+    timeApprove: settings.timeApprove,
+    timeComment: settings.timeComment,
+  };
+
+  const [events, profile] = await Promise.all([
+    GitHubService.fetchEventsForDate(githubUsername, targetDate, githubToken),
+    JiraService.getMyProfile(domain),
+  ]);
+
+  // Oldest-first so first-occurrence logic picks the earliest action
+  const ticketMap = GitHubService.extractTicketMap([...events].reverse(), timeConfig);
+
+  if (ticketMap.size === 0) {
+    return { rows: [] };
+  }
+
+  // Filter out already-synced tickets (parallel checks)
+  const keys = [...ticketMap.keys()];
+  const syncedFlags = await Promise.all(
+    keys.map((key) => GitHubService.isSynced(domain, key, targetDate, profile.accountId))
+  );
+
+  const rows = keys
+    .filter((_, i) => !syncedFlags[i])
+    .map((key) => {
+      const { seconds, description } = ticketMap.get(key);
+      return { key, seconds, description };
+    });
+
+  return { rows };
+}
+
+async function handleGitHubSyncConfirm({ worklogs, date }) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first.');
+
+  const targetDate = date || DateHelper.formatDate(new Date());
+
+  await Promise.all(
+    worklogs.map(({ key, seconds, description }) =>
+      JiraService.createWorklog(domain, key, { timeSpentSeconds: seconds, targetDate, description })
+    )
+  );
+
+  return { count: worklogs.length };
 }

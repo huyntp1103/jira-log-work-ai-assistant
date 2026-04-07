@@ -2,6 +2,9 @@ const DEFAULT_SETTINGS = {
   geminiKey: '',
   spField: 'customfield_10014',
   hoursPerPoint: 4,
+  timeCommit: 3600,
+  timeApprove: 1200,
+  timeComment: 900,
 };
 
 export const DEFAULT_FORMAT = `DAILY REPORT — [Use the Report Date provided by the user, formatted as "D Mon YYYY"]
@@ -153,5 +156,17 @@ export class StorageService {
 
   static async setJiraDomain(domain) {
     await chrome.storage.sync.set({ jiraDomain: domain });
+  }
+
+  static async getGitHubCredentials() {
+    const result = await chrome.storage.local.get(['githubToken', 'githubUsername']);
+    return {
+      githubToken: result.githubToken || '',
+      githubUsername: result.githubUsername || '',
+    };
+  }
+
+  static async setGitHubCredentials({ githubToken, githubUsername }) {
+    await chrome.storage.local.set({ githubToken, githubUsername });
   }
 }

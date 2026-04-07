@@ -6,9 +6,11 @@ import Settings from './components/Settings.jsx';
 import TemplateSelector from './components/TemplateSelector.jsx';
 import DatePicker from './components/DatePicker.jsx';
 import ReportPreview from './components/ReportPreview.jsx';
+import GitHubSyncPanel from './components/GitHubSyncPanel.jsx';
 
 export default function App() {
   const [view, setView] = useState('main');
+  const [activeTab, setActiveTab] = useState('report');
   const [templateId, setTemplateId] = useState(null);
   const [date, setDate] = useState(DateHelper.formatDate(new Date()));
   const { formattedText, setFormattedText, loading, error, generate } = useReport();
@@ -58,41 +60,71 @@ export default function App() {
 
       {/* Body */}
       <div className="p-4 space-y-3">
-        {/* Controls */}
+        {/* Date (shared across tabs) */}
         <div className="bg-white rounded-lg border border-slate-200 p-3.5 space-y-3">
-          <TemplateSelector selectedId={templateId} onSelect={setTemplateId} />
+          {activeTab === 'report' && (
+            <TemplateSelector selectedId={templateId} onSelect={setTemplateId} />
+          )}
           <DatePicker value={date} onChange={setDate} />
         </div>
 
-        {/* Generate */}
-        <button
-          onClick={handleGenerate}
-          disabled={loading || !templateId}
-          className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-        >
-          {loading ? (
-            <>
-              <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Generating...
-            </>
-          ) : 'Generate Report'}
-        </button>
+        {/* Tab bar */}
+        <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-white text-[13px] font-medium">
+          {[
+            { id: 'report', label: 'Daily Report' },
+            { id: 'github', label: 'GitHub Sync' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-        {/* Error */}
-        {error && (
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-[13px] text-red-700" role="alert">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0 mt-0.5">
-              <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-            </svg>
-            {error}
-          </div>
+        {activeTab === 'report' && (
+          <>
+            {/* Generate */}
+            <button
+              onClick={handleGenerate}
+              disabled={loading || !templateId}
+              className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Generating...
+                </>
+              ) : 'Generate Report'}
+            </button>
+
+            {/* Error */}
+            {error && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-[13px] text-red-700" role="alert">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0 mt-0.5">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
+                </svg>
+                {error}
+              </div>
+            )}
+
+            {/* Preview */}
+            <ReportPreview text={formattedText} onChange={setFormattedText} />
+          </>
         )}
 
-        {/* Preview */}
-        <ReportPreview text={formattedText} onChange={setFormattedText} />
+        {activeTab === 'github' && (
+          <GitHubSyncPanel date={date} />
+        )}
       </div>
     </div>
   );
