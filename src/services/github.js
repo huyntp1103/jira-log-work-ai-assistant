@@ -24,7 +24,7 @@ export class GitHubService {
    * @param {string} token - GitHub PAT
    * @returns {Promise<object[]>} filtered events, newest-first (as returned by GitHub)
    */
-  static async fetchEventsForDate(username, targetDate, token) {
+  static async fetchEventsForDate(username, targetDate, token, allowedRepos = []) {
     const res = await fetch(
       `https://api.github.com/users/${username}/events?per_page=100`,
       {
@@ -41,7 +41,11 @@ export class GitHubService {
       throw new Error(msg);
     }
     const events = await res.json();
-    return events.filter((e) => toGmt7DateStr(e.created_at) === targetDate);
+    return events.filter((e) => {
+      const isCorrectDate = toGmt7DateStr(e.created_at) === targetDate;
+      const isAllowedRepo = allowedRepos.length === 0 || allowedRepos.includes(e.repo.name);
+      return isCorrectDate && isAllowedRepo;
+    });
   }
 
   /**
@@ -54,20 +58,17 @@ export class GitHubService {
    * @returns {Map<string, { seconds: number, description: string }>}
    */
   static extractTicketMap(events, timeConfig) {
-    // First pass: collect all ticket IDs that appear in review events
+    // Pass 1: collect tickets from review-related events (PR opened/merged, review, comment)
     const reviewTickets = new Set();
     for (const event of events) {
-      if (
-        event.type === 'PullRequestReviewEvent' ||
-        event.type === 'PullRequestReviewCommentEvent'
-      ) {
-        const title = event.payload.pull_request?.title || '';
-        const branch = event.payload.pull_request?.head?.ref || '';
-        extractIds(title + ' ' + branch).forEach((id) => reviewTickets.add(id));
+      if (['PullRequestReviewEvent', 'PullRequestReviewCommentEvent', 'PullRequestEvent'].includes(event.type)) {
+        const pr = event.payload.pull_request;
+        const text = (pr?.title || '') + ' ' + (pr?.head?.ref || '');
+        extractIds(text).forEach((id) => reviewTickets.add(id));
       }
     }
 
-    // Second pass: first occurrence per ticket wins
+    // Pass 2: first occurrence per ticket wins
     const result = new Map();
 
     for (const event of events) {
@@ -75,37 +76,52 @@ export class GitHubService {
       let eventType = null;
       let eventSeconds = 0;
 
+      // CASE 1: Push code
       if (event.type === 'PushEvent') {
         eventType = 'commit';
         eventSeconds = timeConfig.timeCommit;
         const ref = event.payload.ref || '';
         const msgs = (event.payload.commits || []).map((c) => c.message).join(' ');
         ticketIds = extractIds(ref + ' ' + msgs);
-      } else if (event.type === 'PullRequestReviewEvent') {
+      }
+      // CASE 2: Create branch
+      else if (event.type === 'CreateEvent' && event.payload.ref_type === 'branch') {
+        eventType = 'commit';
+        eventSeconds = timeConfig.timeCommit;
+        ticketIds = extractIds(event.payload.ref || '');
+      }
+      // CASE 3: PR actions (opened, merged, reopened)
+      else if (event.type === 'PullRequestEvent') {
+        const action = event.payload.action;
+        if (['opened', 'merged', 'reopened'].includes(action)) {
+          eventType = 'review';
+          eventSeconds = timeConfig.timeApprove;
+          const pr = event.payload.pull_request;
+          ticketIds = extractIds((pr?.title || '') + ' ' + (pr?.head?.ref || ''));
+        }
+      }
+      // CASE 4: Review
+      else if (event.type === 'PullRequestReviewEvent') {
         const state = event.payload.review?.state;
         eventType = 'review';
         eventSeconds = state === 'approved' ? timeConfig.timeApprove : timeConfig.timeComment;
-        const title = event.payload.pull_request?.title || '';
-        const branch = event.payload.pull_request?.head?.ref || '';
-        ticketIds = extractIds(title + ' ' + branch);
-      } else if (event.type === 'PullRequestReviewCommentEvent') {
+        const pr = event.payload.pull_request;
+        ticketIds = extractIds((pr?.title || '') + ' ' + (pr?.head?.ref || ''));
+      }
+      // CASE 5: Review comment
+      else if (event.type === 'PullRequestReviewCommentEvent') {
         eventType = 'review';
         eventSeconds = timeConfig.timeComment;
-        const title = event.payload.pull_request?.title || '';
-        ticketIds = extractIds(title);
+        ticketIds = extractIds(event.payload.pull_request?.title || '');
       }
 
       for (const id of ticketIds) {
         if (result.has(id)) continue; // first occurrence wins
 
-        let description;
-        if (eventType === 'review') {
-          description = 'Review code';
-        } else if (reviewTickets.has(id)) {
-          description = 'Resolve comment feedbacks, write tests, write API docs, self-test';
-        } else {
-          description = 'Implement based on solution design & implementation plan, self-review, self-test';
-        }
+        const description =
+          eventType === 'review'      ? 'Review code, discuss technical solutions' :
+          reviewTickets.has(id)       ? 'Resolve comment feedbacks, write tests, write API docs, self-test' :
+                                        'Implement based on solution design & implementation plan, self-review, self-test';
 
         result.set(id, { seconds: eventSeconds, description });
       }

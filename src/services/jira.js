@@ -38,7 +38,7 @@ export class JiraService {
   static async createWorklog(domain, issueKey, { timeSpentSeconds, targetDate, description }) {
     return this.fetchJira(domain, `/rest/api/3/issue/${issueKey}/worklog`, 'POST', {
       timeSpentSeconds,
-      started: `${targetDate}T09:00:00.000+0700`,
+      started: `${targetDate}T12:00:00.000+0700`,
       comment: {
         type: 'doc',
         version: 1,

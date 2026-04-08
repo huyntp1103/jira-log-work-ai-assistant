@@ -11,7 +11,7 @@ export default function Settings({ onBack }) {
     timeApprove: 900,
     timeComment: 900,
   });
-  const [github, setGithub] = useState({ githubToken: '', githubUsername: '' });
+  const [github, setGithub] = useState({ githubToken: '', githubUsername: '', allowedRepos: '' });
   const [showKey, setShowKey] = useState(false);
   const [showPat, setShowPat] = useState(false);
   const [apiStatus, setApiStatus] = useState(null);
@@ -163,6 +163,19 @@ export default function Settings({ onBack }) {
               {showPat ? 'Hide' : 'Show'}
             </button>
           </div>
+        </div>
+        <div>
+          <label htmlFor="gh-repos" className="block text-[11px] font-medium text-slate-500 mb-1">
+            Allowed Repos (comma-separated, leave empty for all)
+          </label>
+          <input
+            id="gh-repos"
+            type="text"
+            value={github.allowedRepos}
+            onChange={(e) => setGithub({ ...github, allowedRepos: e.target.value })}
+            placeholder="Org/repo-1, Org/repo-2"
+            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
         <div>
           <p className="text-[11px] font-medium text-slate-500 mb-1.5">Log Time (minutes)</p>

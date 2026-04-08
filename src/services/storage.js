@@ -159,14 +159,15 @@ export class StorageService {
   }
 
   static async getGitHubCredentials() {
-    const result = await chrome.storage.local.get(['githubToken', 'githubUsername']);
+    const result = await chrome.storage.local.get(['githubToken', 'githubUsername', 'allowedRepos']);
     return {
       githubToken: result.githubToken || '',
       githubUsername: result.githubUsername || '',
+      allowedRepos: result.allowedRepos || '',
     };
   }
 
-  static async setGitHubCredentials({ githubToken, githubUsername }) {
-    await chrome.storage.local.set({ githubToken, githubUsername });
+  static async setGitHubCredentials({ githubToken, githubUsername, allowedRepos }) {
+    await chrome.storage.local.set({ githubToken, githubUsername, allowedRepos });
   }
 }

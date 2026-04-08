@@ -100,7 +100,7 @@ async function handleGenerateReport({ date, templateId }) {
 }
 
 async function handleGitHubSyncPreview({ date }) {
-  const [settings, { githubToken, githubUsername }, domain] = await Promise.all([
+  const [settings, { githubToken, githubUsername, allowedRepos }, domain] = await Promise.all([
     StorageService.getSettings(),
     StorageService.getGitHubCredentials(),
     StorageService.getJiraDomain(),
@@ -116,8 +116,12 @@ async function handleGitHubSyncPreview({ date }) {
     timeComment: settings.timeComment,
   };
 
+  const repoList = allowedRepos
+    ? allowedRepos.split(',').map((r) => r.trim()).filter(Boolean)
+    : [];
+
   const [events, profile] = await Promise.all([
-    GitHubService.fetchEventsForDate(githubUsername, targetDate, githubToken),
+    GitHubService.fetchEventsForDate(githubUsername, targetDate, githubToken, repoList),
     JiraService.getMyProfile(domain),
   ]);
 
@@ -134,12 +138,21 @@ async function handleGitHubSyncPreview({ date }) {
     keys.map((key) => GitHubService.isSynced(domain, key, targetDate, profile.accountId))
   );
 
-  const rows = keys
-    .filter((_, i) => !syncedFlags[i])
-    .map((key) => {
-      const { seconds, description } = ticketMap.get(key);
-      return { key, seconds, description };
-    });
+  const unsyncedKeys = keys.filter((_, i) => !syncedFlags[i]);
+
+  // Fetch issue summaries in parallel
+  const summaries = await Promise.all(
+    unsyncedKeys.map((key) =>
+      JiraService.fetchJira(domain, `/rest/api/3/issue/${key}?fields=summary`)
+        .then((issue) => issue.fields?.summary || '')
+        .catch(() => '')
+    )
+  );
+
+  const rows = unsyncedKeys.map((key, i) => {
+    const { seconds, description } = ticketMap.get(key);
+    return { key, summary: summaries[i], seconds, description };
+  });
 
   return { rows };
 }

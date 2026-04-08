@@ -130,12 +130,17 @@ export default function GitHubSyncPanel({ date, autoFetch = false }) {
             {rows.map((row, i) => (
               <div key={i} className="px-3 py-2.5 space-y-1">
                 <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={row.key}
-                    onChange={(e) => updateRow(i, 'key', e.target.value.toUpperCase())}
-                    className="w-24 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-[12px] font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-violet-500"
-                  />
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="text"
+                      value={row.key}
+                      onChange={(e) => updateRow(i, 'key', e.target.value.toUpperCase())}
+                      className="w-24 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-[12px] font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    />
+                    {row.summary && (
+                      <p className="mt-0.5 text-[11px] text-slate-500 truncate" title={row.summary}>{row.summary}</p>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={row.timeStr}
