@@ -51,18 +51,31 @@ export class ReportEngine {
     const getParentSummary = (issue) =>
       issue.fields.parent ? issue.fields.parent.fields.summary : 'General Tasks';
 
-    logData.issues.forEach((issue) => {
-      loggedIssueKeys.add(issue.key);
+    // Parse a Jira `started` ISO string to YYYY-MM-DD in LOCAL time.
+    // Jira returns the offset it stored (e.g. +0700), so new Date() correctly
+    // converts to the browser's local timezone — matching the user's profile timezone.
+    const toLocalDateStr = (isoStr) => {
+      const d = new Date(isoStr);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
 
+    logData.issues.forEach((issue) => {
       const myLogs = issue.fields.worklog.worklogs.filter(
         (l) => l.author.accountId === this.myId
       );
-      const targetLogs = myLogs.filter((l) => l.started.startsWith(this.targetDate));
-      const hasLoggedBefore = myLogs.some(
-        (l) => l.started.split('T')[0] < this.targetDate
-      );
-
+      const targetLogs = myLogs.filter((l) => toLocalDateStr(l.started) === this.targetDate);
       const secondsOnTarget = targetLogs.reduce((acc, l) => acc + l.timeSpentSeconds, 0);
+
+      // Skip issues where no actual time was logged on targetDate (can appear due to
+      // Jira's JQL worklogDate matching differently from the stored started timestamp).
+      if (secondsOnTarget === 0) return;
+
+      loggedIssueKeys.add(issue.key);
+
+      const hasLoggedBefore = myLogs.some((l) => toLocalDateStr(l.started) < this.targetDate);
       const category = hasLoggedBefore ? 'Progress Changed' : 'Done Yesterday';
 
       // Use only MY worklogs for progress, not all users' (QA may also log time)

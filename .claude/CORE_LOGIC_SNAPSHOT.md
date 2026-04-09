@@ -169,12 +169,27 @@ const ReportEngine = {
       return `${Math.round(prev)}% ➔ ${Math.round(current)}%`;
     };
 
+    // Parse a Jira `started` ISO string to YYYY-MM-DD in LOCAL time.
+    // Required after setting Jira profile timezone to GMT+7: started values now
+    // carry a +0700 offset, so string-prefix matching against YYYY-MM-DD is wrong.
+    const toLocalDateStr = (isoStr) => {
+      const d = new Date(isoStr);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
     logData.issues.forEach((issue) => {
-      loggedKeys.add(issue.key);
       const myLogs     = issue.fields.worklog.worklogs.filter((l) => l.author.accountId === myId);
-      const targetLogs = myLogs.filter((l) => l.started.startsWith(targetDate));
-      const hasLoggedBefore = myLogs.some((l) => l.started.split('T')[0] < targetDate);
+      const targetLogs = myLogs.filter((l) => toLocalDateStr(l.started) === targetDate);
       const secondsToday = targetLogs.reduce((acc, l) => acc + l.timeSpentSeconds, 0);
+
+      // Skip if no actual time logged on targetDate in local timezone
+      if (secondsToday === 0) return;
+
+      loggedKeys.add(issue.key);
+      const hasLoggedBefore = myLogs.some((l) => toLocalDateStr(l.started) < targetDate);
       const category = hasLoggedBefore ? 'Progress Changed' : 'Done Yesterday';
 
       report[category].push({
@@ -456,14 +471,14 @@ async function runDailyTool(dateStr = null) {
   console.log('✅ Raw report:');
   console.dir(reportData, { depth: null });
 
-  console.log('⏳ [2/3] Sending to Gemini AI...');
-  const slackReport = await GeminiService.generateReport(reportData, profile.displayName, targetDate);
+  // console.log('⏳ [2/3] Sending to Gemini AI...');
+  // const slackReport = await GeminiService.generateReport(reportData, profile.displayName, targetDate);
 
-  console.log(`%c🚀 FINAL SLACK REPORT — ${targetDate}`, 'color:#00ff00;font-size:18px;font-weight:bold');
-  console.log('--------------------------------------------------');
-  console.log(slackReport);
-  console.log('--------------------------------------------------');
-  return slackReport;
+  // console.log(`%c🚀 FINAL SLACK REPORT — ${targetDate}`, 'color:#00ff00;font-size:18px;font-weight:bold');
+  // console.log('--------------------------------------------------');
+  // console.log(slackReport);
+  // console.log('--------------------------------------------------');
+  // return slackReport;
 }
 
 // ----------------------------------------------------------------
@@ -534,5 +549,5 @@ console.log('   runDailyTool()             — generate & format daily report');
 console.log('   runGitHubSync()            — preview GitHub sync (dry run)');
 console.log('   runGitHubSync(date, false) — execute GitHub sync');
 
-runGitHubSync();
+runDailyTool();
 ```
