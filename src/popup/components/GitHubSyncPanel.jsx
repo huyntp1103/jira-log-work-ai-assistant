@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * Convert seconds to human-readable string: "1h 30m", "45m", "2h"
@@ -26,15 +26,17 @@ function parseTime(str) {
   return (h * 3600) + (m * 60);
 }
 
-export default function GitHubSyncPanel({ date, autoFetch = false }) {
-  const [rows, setRows] = useState(null); // null = not fetched yet
+export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = null, onRowsChange, fromCache = false }) {
+  const [rows, setRows] = useState(
+    savedRows ? savedRows.map((r) => ({ ...r, timeStr: r.timeStr ?? fmtTime(r.seconds) })) : null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
-  const [syncDone, setSyncDone] = useState(null); // number of worklogs created
+  const [syncDone, setSyncDone] = useState(null);
 
   useEffect(() => {
-    if (autoFetch) handlePreview();
+    if (autoFetch && savedRows === null) handlePreview();
   }, []);
 
   const handlePreview = async () => {
@@ -46,7 +48,9 @@ export default function GitHubSyncPanel({ date, autoFetch = false }) {
     try {
       const res = await chrome.runtime.sendMessage({ type: 'GITHUB_SYNC_PREVIEW', date });
       if (res.type === 'GITHUB_SYNC_ERROR') throw new Error(res.error);
-      setRows(res.rows.map((r) => ({ ...r, timeStr: fmtTime(r.seconds) })));
+      const fetched = res.rows.map((r) => ({ ...r, timeStr: fmtTime(r.seconds) }));
+      setRows(fetched);
+      onRowsChange?.(fetched);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -76,7 +80,11 @@ export default function GitHubSyncPanel({ date, autoFetch = false }) {
   };
 
   const updateRow = (i, field, value) => {
-    setRows((prev) => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
+    setRows((prev) => {
+      const next = prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r);
+      onRowsChange?.(next);
+      return next;
+    });
   };
 
   return (
@@ -167,23 +175,26 @@ export default function GitHubSyncPanel({ date, autoFetch = false }) {
             ))}
           </div>
 
-          <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50">
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="w-full py-2 rounded-lg text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              {syncing ? (
-                <>
-                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Syncing...
-                </>
-              ) : `Sync ${rows.length} worklog${rows.length !== 1 ? 's' : ''} to Jira`}
-            </button>
-          </div>
+          {/* Sync button — hidden in fromCache mode */}
+          {!fromCache && (
+            <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="w-full py-2 rounded-lg text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                {syncing ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Syncing...
+                  </>
+                ) : `Sync ${rows.length} worklog${rows.length !== 1 ? 's' : ''} to Jira`}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

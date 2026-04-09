@@ -170,4 +170,29 @@ export class StorageService {
   static async setGitHubCredentials({ githubToken, githubUsername, allowedRepos }) {
     await chrome.storage.local.set({ githubToken, githubUsername, allowedRepos });
   }
+
+  static async getDailyCache(date) {
+    const result = await chrome.storage.local.get('dailyCache');
+    const cache = result.dailyCache || {};
+    return cache[date] || null;
+  }
+
+  static async setDailyCache(date, { reportText, githubRows }) {
+    const result = await chrome.storage.local.get('dailyCache');
+    const cache = result.dailyCache || {};
+
+    cache[date] = {
+      reportText: reportText ?? cache[date]?.reportText ?? '',
+      githubRows: githubRows ?? cache[date]?.githubRows ?? [],
+      savedAt: new Date().toISOString(),
+    };
+
+    // Prune to last 30 days
+    const keys = Object.keys(cache).sort();
+    if (keys.length > 30) {
+      keys.slice(0, keys.length - 30).forEach((k) => delete cache[k]);
+    }
+
+    await chrome.storage.local.set({ dailyCache: cache });
+  }
 }
