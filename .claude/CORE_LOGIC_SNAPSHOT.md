@@ -148,7 +148,7 @@ const ReportEngine = {
         fields
       ),
       JiraService.searchJql(
-        `assignee = currentUser() AND sprint in openSprints() AND status in ("In Progress", "In Review", "QA FAILED") AND created >= "${twoWeeksAgoStr}"`,
+        `assignee = currentUser() AND sprint in openSprints() AND (status = "In Progress" OR (status in ("In Review", "QA FAILED") AND created >= "${twoWeeksAgoStr}"))`,
         fields
       ),
     ]);
