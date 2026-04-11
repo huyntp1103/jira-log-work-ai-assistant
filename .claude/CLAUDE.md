@@ -72,3 +72,4 @@ AND (
 ## Development Rules
 - **No auto build:** Do not run `npm run build` after code changes. The user rebuilds manually.
 - **Sync the snapshot:** When modifying `report-engine.js`, `github.js`, or `jira.js` core logic, apply the same change to `.claude/CORE_LOGIC_SNAPSHOT.md`.
+- **Tests:** After modifying code, write new tests if needed, then run `npm run test` to verify all tests pass. Fix failing tests (or the code) before finishing.

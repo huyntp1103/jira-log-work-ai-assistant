@@ -1,0 +1,145 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { JiraService } from '../jira.js';
+
+describe('JiraService', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('fetchJira', () => {
+    it('sends correct headers and credentials', async () => {
+      const mockFetch = vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ ok: true }),
+      }));
+
+      await JiraService.fetchJira('test.atlassian.net', '/rest/api/3/myself');
+
+      expect(fetch).toHaveBeenCalledWith(
+        'https://test.atlassian.net/rest/api/3/myself',
+        expect.objectContaining({
+          method: 'GET',
+          credentials: 'include',
+          headers: expect.objectContaining({
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Atlassian-Token': 'no-check',
+          }),
+        })
+      );
+    });
+
+    it('includes body for POST requests', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      }));
+
+      const body = { jql: 'assignee = currentUser()', fields: ['summary'] };
+      await JiraService.fetchJira('test.atlassian.net', '/rest/api/3/search/jql', 'POST', body);
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify(body),
+        })
+      );
+    });
+
+    it('throws on non-OK response', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+      }));
+
+      await expect(
+        JiraService.fetchJira('test.atlassian.net', '/rest/api/3/myself')
+      ).rejects.toThrow('Jira API error: 401 Unauthorized');
+    });
+  });
+
+  describe('createWorklog', () => {
+    it('sends correct ADF comment with [AI] prefix', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ id: '123' }),
+      }));
+
+      await JiraService.createWorklog('test.atlassian.net', 'UP-100', {
+        timeSpentSeconds: 3600,
+        targetDate: '2026-04-08',
+        description: 'Implement feature',
+      });
+
+      const callBody = JSON.parse(fetch.mock.calls[0][1].body);
+
+      expect(callBody.timeSpentSeconds).toBe(3600);
+      expect(callBody.started).toBe('2026-04-08T12:00:00.000+0700');
+      expect(callBody.comment.type).toBe('doc');
+      expect(callBody.comment.content[0].content[0].text).toBe('[AI] Implement feature');
+    });
+
+    it('uses +0700 timezone offset in started field', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      }));
+
+      await JiraService.createWorklog('test.atlassian.net', 'UP-200', {
+        timeSpentSeconds: 1800,
+        targetDate: '2026-04-10',
+        description: 'test',
+      });
+
+      const callBody = JSON.parse(fetch.mock.calls[0][1].body);
+      expect(callBody.started).toMatch(/\+0700$/);
+    });
+  });
+
+  describe('searchJql', () => {
+    it('sends JQL as POST with maxResults 50', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ issues: [] }),
+      }));
+
+      await JiraService.searchJql('test.atlassian.net', 'assignee = currentUser()', ['summary']);
+
+      const callBody = JSON.parse(fetch.mock.calls[0][1].body);
+      expect(callBody.jql).toBe('assignee = currentUser()');
+      expect(callBody.fields).toEqual(['summary']);
+      expect(callBody.maxResults).toBe(50);
+    });
+  });
+
+  describe('getMyProfile', () => {
+    it('extracts accountId and cleans displayName', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          accountId: 'abc-123',
+          displayName: 'John Doe (Company)',
+        }),
+      }));
+
+      const profile = await JiraService.getMyProfile('test.atlassian.net');
+      expect(profile.accountId).toBe('abc-123');
+      expect(profile.displayName).toBe('John Doe');
+    });
+
+    it('handles displayName without parenthesis', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          accountId: 'abc-123',
+          displayName: 'Jane Smith',
+        }),
+      }));
+
+      const profile = await JiraService.getMyProfile('test.atlassian.net');
+      expect(profile.displayName).toBe('Jane Smith');
+    });
+  });
+});
