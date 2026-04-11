@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage.js';
 import { useReport } from '../hooks/useReport.js';
 import { DateHelper } from '../utils/date.js';
@@ -9,15 +9,88 @@ import GitHubSyncPanel from './components/GitHubSyncPanel.jsx';
 
 export default function App() {
   const [view, setView] = useState('main');
+  const [tab, setTab] = useState('report'); // 'report' | 'github'
   const [date, setDate] = useState(DateHelper.formatDate(new Date()));
-  const [githubFetchKey, setGithubFetchKey] = useState(0); // increment to trigger a new fetch
+  const [githubFetchKey, setGithubFetchKey] = useState(0);
+  const [githubRows, setGithubRows] = useState(null);
+
+  const [cacheInfo, setCacheInfo] = useState(null);      // { savedAt } | null
+  const [reportFromCache, setReportFromCache] = useState(false);
+  const [githubFromCache, setGithubFromCache] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
+
   const { formattedText, setFormattedText, loading, error, generate } = useReport();
+
+  // On date change: check cache and auto-populate both tabs
+  useEffect(() => {
+    let cancelled = false;
+    async function checkAndLoad() {
+      const cached = await StorageService.getDailyCache(date);
+      if (cancelled) return;
+
+      if (!cached) {
+        setCacheInfo(null);
+        setFormattedText('');
+        setGithubRows(null);
+        setGithubFetchKey(0);
+        setReportFromCache(false);
+        setGithubFromCache(false);
+        return;
+      }
+
+      setCacheInfo({ savedAt: cached.savedAt });
+
+      if (cached.reportText) {
+        setFormattedText(cached.reportText);
+        setReportFromCache(true);
+      } else {
+        setFormattedText('');
+        setReportFromCache(false);
+      }
+
+      if (cached.githubRows) {
+        setGithubRows(cached.githubRows);
+        setGithubFetchKey((k) => k + 1);
+        setGithubFromCache(true);
+      } else {
+        setGithubRows(null);
+        setGithubFetchKey(0);
+        setGithubFromCache(false);
+      }
+    }
+    checkAndLoad();
+    return () => { cancelled = true; };
+  }, [date]);
 
   useEffect(() => {
     StorageService.getSettings().then((s) => {
       if (!s.geminiKey) setView('settings');
     });
   }, []);
+
+  const hasContent = !!(formattedText || (githubRows && githubRows.length > 0));
+
+  const handleSave = async () => {
+    await StorageService.setDailyCache(date, {
+      reportText: formattedText || undefined,
+      githubRows: githubRows || undefined,
+    });
+    const saved = await StorageService.getDailyCache(date);
+    setCacheInfo({ savedAt: saved.savedAt });
+    setSaveFlash(true);
+    setTimeout(() => setSaveFlash(false), 2000);
+  };
+
+  const handleRefreshReport = () => {
+    setReportFromCache(false);
+    setFormattedText('');
+  };
+
+  const handleRefreshGithub = () => {
+    setGithubFromCache(false);
+    setGithubRows(null);
+    setGithubFetchKey((k) => k + 1);
+  };
 
   if (view === 'settings') {
     return (
@@ -53,55 +126,145 @@ export default function App() {
 
       {/* Body */}
       <div className="p-4 space-y-3">
-        {/* Date */}
-        <div className="bg-white rounded-lg border border-slate-200 p-3.5">
-          <DatePicker value={date} onChange={setDate} />
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2">
+        {/* Tabs */}
+        <div className="flex gap-0 bg-white rounded-lg border border-slate-200 p-1">
           <button
-            onClick={() => generate(date)}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Generating...
-              </>
-            ) : 'Generate Report'}
-          </button>
-          <button
-            onClick={() => setGithubFetchKey((k) => k + 1)}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+            onClick={() => setTab('github')}
+            className={`flex-1 py-1.5 rounded-md text-[13px] font-semibold transition-all ${
+              tab === 'github'
+                ? 'bg-violet-600 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
             GitHub Sync
           </button>
+          <button
+            onClick={() => setTab('report')}
+            className={`flex-1 py-1.5 rounded-md text-[13px] font-semibold transition-all ${
+              tab === 'report'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Daily Report
+          </button>
         </div>
 
-        {/* Report error */}
-        {error && (
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-[13px] text-red-700" role="alert">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0 mt-0.5">
-              <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-            </svg>
-            {error}
+        {/* Date + Save — shared across both tabs */}
+        <div className="bg-white rounded-lg border border-slate-200 p-3.5">
+          <DatePicker
+            value={date}
+            onChange={setDate}
+            cacheInfo={cacheInfo}
+            hasContent={hasContent}
+            saveFlash={saveFlash}
+            onSave={handleSave}
+          />
+        </div>
+
+        {/* ── Report tab ── */}
+        {tab === 'report' && (
+          <div className="space-y-3">
+            {reportFromCache ? (
+              <CacheBanner savedAt={cacheInfo?.savedAt} onRefresh={handleRefreshReport} color="blue" />
+            ) : (
+              <button
+                onClick={() => generate(date)}
+                disabled={loading}
+                className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Generating...
+                  </>
+                ) : 'Generate Report'}
+              </button>
+            )}
+
+            {error && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-[13px] text-red-700" role="alert">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0 mt-0.5">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
+                </svg>
+                {error}
+              </div>
+            )}
+
+            <ReportPreview text={formattedText} onChange={setFormattedText} />
           </div>
         )}
 
-        {/* Report preview */}
-        <ReportPreview text={formattedText} onChange={setFormattedText} />
+        {/* ── GitHub tab ── */}
+        {tab === 'github' && (
+          <div className="space-y-3">
+            {githubFromCache ? (
+              <CacheBanner savedAt={cacheInfo?.savedAt} onRefresh={handleRefreshGithub} color="violet" />
+            ) : (
+              <button
+                onClick={() => { setGithubRows(null); setGithubFetchKey((k) => k + 1); }}
+                className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-violet-600 hover:bg-violet-700 active:scale-[0.98] transition-all"
+              >
+                Fetch GitHub Activity
+              </button>
+            )}
 
-        {/* GitHub Sync panel — rendered once triggered, key forces re-fetch on each click */}
-        {githubFetchKey > 0 && (
-          <GitHubSyncPanel key={githubFetchKey} date={date} autoFetch />
+            {githubFetchKey > 0 && (
+              <GitHubSyncPanel
+                key={githubFetchKey}
+                date={date}
+                autoFetch={!githubFromCache}
+                savedRows={githubFromCache ? githubRows : null}
+                onRowsChange={setGithubRows}
+                fromCache={githubFromCache}
+              />
+            )}
+          </div>
         )}
       </div>
     </div>
   );
+}
+
+function CacheBanner({ savedAt, onRefresh, color = 'amber' }) {
+  const styles = {
+    amber: 'bg-amber-50 border-amber-200 text-amber-700',
+    violet: 'bg-violet-50 border-violet-200 text-violet-700',
+    blue: 'bg-blue-50 border-blue-200 text-blue-700',
+  };
+  const btnStyles = {
+    amber: 'text-amber-600 hover:text-amber-800',
+    violet: 'text-violet-600 hover:text-violet-800',
+    blue: 'text-blue-600 hover:text-blue-800',
+  };
+  return (
+    <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-[12px] ${styles[color]}`}>
+      <div className="flex items-center gap-1.5">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 shrink-0">
+          <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" />
+        </svg>
+        Restored from cache · {formatSavedAt(savedAt)}
+      </div>
+      <button
+        onClick={onRefresh}
+        className={`flex items-center gap-1 font-medium transition-colors ${btnStyles[color]}`}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+          <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z" clipRule="evenodd" />
+        </svg>
+        Refresh
+      </button>
+    </div>
+  );
+}
+
+function formatSavedAt(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
 }

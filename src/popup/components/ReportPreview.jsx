@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
-export default function ReportPreview({ text, onChange }) {
+export default function ReportPreview({ text, onChange, fromCache }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
