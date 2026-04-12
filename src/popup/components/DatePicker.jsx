@@ -2,11 +2,6 @@ import { DateHelper } from '../../utils/date.js';
 
 export default function DatePicker({ value, onChange, cacheInfo, hasContent, saveFlash, onSave }) {
   const today = DateHelper.formatDate(new Date());
-  const tomorrow = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return DateHelper.formatDate(d);
-  })();
 
   return (
     <div>
@@ -18,7 +13,7 @@ export default function DatePicker({ value, onChange, cacheInfo, hasContent, sav
           id="report-date"
           type="date"
           value={value || today}
-          max={tomorrow}
+          max={today}
           onChange={(e) => onChange(e.target.value)}
           className="flex-1 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
