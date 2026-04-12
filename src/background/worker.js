@@ -45,7 +45,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-async function handleGenerateReport({ date, templateId }) {
+export async function handleGenerateReport({ date, templateId }) {
   const settings = await StorageService.getSettings();
   const templates = await StorageService.getTemplates();
   const domain = await StorageService.getJiraDomain();
@@ -60,14 +60,13 @@ async function handleGenerateReport({ date, templateId }) {
     || templates[0];
   if (!template) throw new Error('No template found. Please create one in Settings.');
 
-  const baseDate = date ? new Date(date + 'T00:00:00') : new Date();
-  const targetDate = DateHelper.getTargetDate(baseDate);
+  const targetDate = date || DateHelper.formatDate(new Date());
+  const baseDate = new Date(targetDate + 'T00:00:00');
   console.log('[BG] Target date:', targetDate);
 
   // Step 1: Fetch user profile
   console.log('[BG] Step 1: Fetching user profile...');
   const profile = await JiraService.getMyProfile(domain);
-  console.log('[BG] User:', profile.displayName);
 
   // Step 2: Fetch and categorize Jira data
   console.log('[BG] Step 2: Fetching Jira data...');
@@ -99,7 +98,7 @@ async function handleGenerateReport({ date, templateId }) {
   return { report, formattedText };
 }
 
-async function handleGitHubSyncPreview({ date }) {
+export async function handleGitHubSyncPreview({ date }) {
   const [settings, { githubToken, githubUsername, allowedRepos }, domain] = await Promise.all([
     StorageService.getSettings(),
     StorageService.getGitHubCredentials(),
