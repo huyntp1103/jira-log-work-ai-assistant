@@ -9,7 +9,7 @@ import GitHubSyncPanel from './components/GitHubSyncPanel.jsx';
 
 export default function App() {
   const [view, setView] = useState('main');
-  const [tab, setTab] = useState('report'); // 'report' | 'github'
+  const [tab, setTab] = useState('github'); // 'report' | 'github'
   const [date, setDate] = useState(DateHelper.formatDate(new Date()));
   const [githubFetchKey, setGithubFetchKey] = useState(0);
   const [githubRows, setGithubRows] = useState(null);

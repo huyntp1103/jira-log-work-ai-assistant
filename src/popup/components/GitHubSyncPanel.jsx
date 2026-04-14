@@ -26,7 +26,7 @@ function parseTime(str) {
   return (h * 3600) + (m * 60);
 }
 
-export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = null, onRowsChange, fromCache = false }) {
+export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = null, onRowsChange }) {
   const [rows, setRows] = useState(
     savedRows ? savedRows.map((r) => ({ ...r, timeStr: r.timeStr ?? fmtTime(r.seconds) })) : null
   );
@@ -175,8 +175,8 @@ export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = n
             ))}
           </div>
 
-          {/* Sync button — hidden in fromCache mode */}
-          {!fromCache && (
+          {/* Sync button */}
+          {(
             <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50">
               <button
                 onClick={handleSync}
