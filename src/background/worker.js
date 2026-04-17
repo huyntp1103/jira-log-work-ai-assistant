@@ -7,6 +7,11 @@ import { DateHelper } from '../utils/date.js';
 
 console.log('[BG] Service worker started');
 
+// Open side panel when the toolbar icon is clicked
+chrome.sidePanel
+  ?.setPanelBehavior({ openPanelOnActionClick: true })
+  .catch((err) => console.warn('[BG] setPanelBehavior failed:', err));
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[BG] Message received:', message.type);
 
@@ -90,7 +95,7 @@ export async function handleGenerateReport({ date, templateId }) {
     {
       displayName: profile.displayName,
       platform: template.name.split(/\s/)[0],
-      targetDate: date || DateHelper.formatDate(new Date()),
+      targetDate: DateHelper.getReportDate(targetDate),
     }
   );
   console.log('[BG] Gemini response received, length:', formattedText.length);

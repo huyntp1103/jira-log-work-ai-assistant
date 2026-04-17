@@ -94,11 +94,11 @@ export default function App() {
 
   if (view === 'settings') {
     return (
-      <div className="w-[420px] min-h-[480px] bg-slate-50">
+      <div className="w-full min-h-screen bg-slate-50">
         <div className="bg-gradient-to-r from-violet-600 to-blue-500 px-5 py-3.5">
           <h1 className="text-white text-sm font-semibold">Settings</h1>
         </div>
-        <div className="p-4">
+        <div className="p-4 max-w-[520px] mx-auto">
           <Settings onBack={() => setView('main')} />
         </div>
       </div>
@@ -106,12 +106,12 @@ export default function App() {
   }
 
   return (
-    <div className="w-[420px] min-h-[240px] bg-slate-50">
+    <div className="w-full min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-gradient-to-r from-violet-600 to-blue-500 px-5 py-3.5 flex items-center justify-between">
         <div>
-          <h1 className="text-white text-sm font-semibold">Jira Report Assistant</h1>
-          <p className="text-blue-100 text-[11px] mt-0.5">AI-powered daily reports</p>
+          <h1 className="text-white text-sm font-semibold">Jira Daily Report AI Assistant</h1>
+          {/* <p className="text-blue-100 text-[11px] mt-0.5">AI-powered daily reports</p> */}
         </div>
         <button
           onClick={() => setView('settings')}
@@ -125,7 +125,7 @@ export default function App() {
       </div>
 
       {/* Body */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 max-w-[520px] mx-auto">
         {/* Tabs */}
         <div className="flex gap-0 bg-white rounded-lg border border-slate-200 p-1">
           <button

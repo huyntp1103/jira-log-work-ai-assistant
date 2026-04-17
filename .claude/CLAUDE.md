@@ -10,8 +10,9 @@ It bridges the gap between Jira activity (worklogs/sprints) and communication pl
 
 ## Tech Stack (Manifest V3)
 - **Core Architecture:** Chrome Extension Manifest V3 (required for modern Chrome Extensions).
+- **UI Surface:** Chrome Side Panel API (requires Chrome 114+). Opens via toolbar icon, `openPanelOnActionClick: true`. Persistent across tab navigation.
 - **Build Tool:** Vite + @crxjs/vite-plugin (Fast bundling, HMR support).
-- **Frontend:** React + Tailwind CSS (Modern, responsive Popup UI).
+- **Frontend:** React + Tailwind CSS (fluid layout, `max-w-[520px]` content cap).
 - **State/Storage:** `chrome.storage.sync` for settings & templates (synced across devices); `chrome.storage.local` for sensitive credentials (GitHub PAT, token) and daily cache.
 - **AI Engine:** Gemini API with model fallback array: `['gemini-3.1-flash-lite-preview', 'gemini-2.5-flash-lite']` — tries primary first, falls back on error (e.g. high demand).
 - **Language:** JavaScript (ES6+).
@@ -19,9 +20,9 @@ It bridges the gap between Jira activity (worklogs/sprints) and communication pl
 ## Core Features
 - **Daily Report Generation:** Fetch Jira worklogs, categorize into "Done Yesterday" / "Progress Changed" / "Plan for Today", format with Gemini AI.
 - **GitHub Activity Sync:** Fetch GitHub events for a date, extract Jira ticket IDs, create Jira worklogs automatically. Deduplication via `[AI]` tag check on existing worklogs.
-- **Daily Cache:** Explicit save/load per date (`chrome.storage.local`, key `dailyCache`, 30-day retention). User saves with floppy icon; restores with clock icon next to DatePicker.
+- **Daily Cache:** Explicit save/load per date (`chrome.storage.local`, key `dailyCache`, 30-day retention). Auto-loads on date change; user saves with Save button next to DatePicker. Cached data shows a "Restored from cache" banner with a Refresh button per tab.
 - **Multi-Platform Templates:** Users define report format templates; Gemini wraps them with platform-specific processing rules.
-- **Frictionless UX:** Generate + GitHub Sync side-by-side buttons, auto-copy to clipboard.
+- **Two-Tab UX:** "GitHub Sync" and "Daily Report" are separate tabs. Each tab has its own action button and independent cache state. DatePicker and Save button are shared across both tabs.
 
 ## Project Layout
 
@@ -30,9 +31,9 @@ It bridges the gap between Jira activity (worklogs/sprints) and communication pl
 - **`src/services/github.js`** — GitHub Events API: `fetchEventsForDate` (filter by date GMT+7 + allowedRepos), `extractTicketMap` (two-pass: review heuristic + first-occurrence-wins), `isSynced`.
 - **`src/services/storage.js`** — All `chrome.storage` access: settings, templates, domain, GitHub credentials, daily cache.
 - **`src/services/report-engine.js`** — Fetches Jira data, categorizes issues, calculates progress.
-- **`src/popup/`** — React UI (App.jsx + components: DatePicker, ReportPreview, GitHubSyncPanel, Settings, TemplateSelector).
+- **`src/popup/`** — React UI rendered in the Chrome **side panel** (folder name is historical — predates the side panel migration). App.jsx manages two tabs (`report`/`github`) with shared DatePicker/Save and per-tab cache state. Components: DatePicker, ReportPreview, GitHubSyncPanel, Settings, TemplateSelector.
 - **`src/hooks/useReport.js`** — Thin hook wiring report generation to React state.
-- **`src/utils/date.js`** — `getTargetDate` (Mon→Fri logic), `formatDate` (local time, no UTC shift).
+- **`src/utils/date.js`** — `getTargetDate` (Mon→Fri logic, kept for reference but no longer used by the worker), `formatDate` (local time, no UTC shift).
 - **`src/utils/progress.js`** — Progress % calculation helpers.
 - **`src/background/worker.js`** — Service worker: handles `GENERATE_REPORT`, `TEST_GEMINI`, `GITHUB_SYNC_PREVIEW`, `GITHUB_SYNC_CONFIRM` messages.
 - **`src/content/`** — Content script injected into Jira tabs (detects domain).
@@ -40,11 +41,15 @@ It bridges the gap between Jira activity (worklogs/sprints) and communication pl
 
 ## Key Implementation Details
 
+### Date behavior
+- The picked date is used **directly** as `targetDate` for both Generate Report and GitHub Sync — no automatic conversion (e.g. Monday → Friday). What the user picks is what gets fetched.
+- DatePicker `max` is capped at today (no future dates).
+
 ### Timezone handling
 - Jira profile timezone is set to **GMT+7**. Worklog `started` strings carry a `+0700` offset.
 - Always parse `l.started` with `new Date(isoStr)` and extract local date parts — never use `.startsWith(date)` or `.split('T')[0]` string slicing.
 - GitHub events are in UTC; convert to GMT+7 via `utcMs + 7*3600*1000` before date comparison.
-- Worklog `started` field sent to Jira: `${targetDate}T09:00:00.000+0700`.
+- Worklog `started` field sent to Jira: `${targetDate}T12:00:00.000+0700`.
 
 ### Storage separation
 - `chrome.storage.sync` — `settings`, `templates`, `jiraDomain`
@@ -70,6 +75,8 @@ AND (
 - **Domain Scoping:** Permissions limited to `*.atlassian.net` and `generativelanguage.googleapis.com`.
 
 ## Development Rules
-- **No auto build:** Do not run `npm run build` after code changes. The user rebuilds manually.
 - **Sync the snapshot:** When modifying `report-engine.js`, `github.js`, or `jira.js` core logic, apply the same change to `.claude/CORE_LOGIC_SNAPSHOT.md`.
-- **Tests:** After modifying code, write new tests if needed, then run `npm run test` to verify all tests pass. Fix failing tests (or the code) before finishing.
+- **After every code change, run this exact sequence:**
+  1. `nvm use` — switch to the project's Node version
+  2. `npm run test` — verify all unit tests pass (write new tests first if needed). Fix failing tests or code before proceeding.
+  3. `npm run build` — produce the final extension bundle.

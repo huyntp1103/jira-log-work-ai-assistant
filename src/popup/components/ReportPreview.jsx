@@ -26,7 +26,7 @@ export default function ReportPreview({ text, onChange, fromCache }) {
       <button
         onClick={handleCopy}
         className={`w-full py-2.5 rounded-lg text-[13px] font-semibold text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 ${
-          copied ? 'bg-green-600' : 'bg-violet-600 hover:bg-violet-700'
+          copied ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'
         }`}
       >
         {copied ? 'Copied!' : 'Copy to Clipboard'}

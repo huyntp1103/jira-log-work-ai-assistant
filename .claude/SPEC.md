@@ -16,6 +16,7 @@ src/
 │   ├── ErrorBoundary.jsx   # Crash recovery UI
 │   └── components/
 │       ├── ReportPreview.jsx
+│       ├── GitHubSyncPanel.jsx
 │       ├── TemplateSelector.jsx
 │       ├── DatePicker.jsx
 │       └── Settings.jsx
@@ -33,7 +34,7 @@ src/
 
 ### Component Roles
 
-- **`popup/`** — The only React surface. Control center (Template selection, Date picker, Preview).
+- **`popup/`** — The only React surface, rendered in the Chrome **side panel** (folder name is historical). Two-tab layout: "GitHub Sync" and "Daily Report". Shared DatePicker + Save button. Per-tab cache state with auto-load on date change.
 - **`content/main.js`** — Captures `window.location.hostname` on Jira tabs, saves to `chrome.storage.sync`.
 - **`background/worker.js`** — Listens for messages from popup, orchestrates full pipeline: storage → Jira → ReportEngine → Gemini → respond.
 - **`services/`** — Service layer pattern. Each service is a class with static methods.
@@ -47,16 +48,22 @@ Popup → Background: { type: 'GENERATE_REPORT', date, templateId }
 Background → Popup: { type: 'REPORT_RESULT', report, formattedText }
 Background → Popup: { type: 'REPORT_ERROR', error }
 Popup → Background: { type: 'TEST_GEMINI', apiKey }
+Popup → Background: { type: 'GITHUB_SYNC_PREVIEW', date }
+Background → Popup: { type: 'GITHUB_SYNC_DATA', rows }
+Background → Popup: { type: 'GITHUB_SYNC_ERROR', error }
+Popup → Background: { type: 'GITHUB_SYNC_CONFIRM', worklogs, date }
+Background → Popup: { type: 'GITHUB_SYNC_DONE', count }
 ```
 
 ## 2. Data Fetching Logic (Jira API)
 
 ### A. "Target Date" Calculation
 
-- If today is Monday -> Target Date = Friday.
-- If today is Sunday -> Target Date = Friday.
-- Else -> Target Date = Yesterday.
+- The picked date is used **directly** as `targetDate` — no automatic conversion.
+- Both Generate Report and GitHub Sync use the same date, so results are always in sync.
+- DatePicker `max` is capped at today; no future dates allowed.
 - **Important:** Use local time formatting (not `toISOString()`) to avoid timezone shift bugs.
+- `DateHelper.getTargetDate()` (Mon→Fri logic) still exists in `date.js` but is no longer called by the worker.
 
 ### B. "Done Yesterday" & "Progress Changed"
 

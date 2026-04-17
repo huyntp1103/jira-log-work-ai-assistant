@@ -2,33 +2,53 @@
 
 ## 1. Three-Stage Workflow
 1. **Setup:** User enters Gemini API Key and manages report templates in the Settings page.
-2. **Execution:** User opens the popup on a Jira tab -> Selects a Template (e.g., Backend Core) -> Clicks "Generate".
-3. **Review:** User previews the AI output -> Edits if necessary -> Clicks "Copy" to clipboard.
+2. **Execution:** User opens the popup on a Jira tab -> Picks a date -> Uses "GitHub Sync" tab to fetch & sync GitHub activity, or "Daily Report" tab to generate the AI report.
+3. **Review:** User previews the AI output -> Edits if necessary -> Clicks "Copy" to clipboard. Saves results with the Save button for future retrieval.
 
-## 2. Popup Screens
+## 2. Side Panel Screens
+
+> The UI renders inside the Chrome **side panel** (Chrome 114+). Users open it by clicking the toolbar icon. Width is user-resizable; content caps at `max-w-[520px]` with `mx-auto` centering so it stays readable in wide panels.
+
 
 ### A. Main View (Home)
-- **Template Dropdown:** Choose between saved templates.
-- **Date Picker:** Defaults to "Today" (logic handles target date automatically). Allows selecting a specific date for past reports.
-- **Generate Button:** Primary Action.
-- **Preview Area:** Real-time editable text area showing AI output. Supports in-popup editing for final polish before copying.
-- **Copy Button:** Success feedback (e.g., button turns green with "Copied!" text).
+
+Two-tab layout with shared header controls:
+
+- **Tab Bar:** "GitHub Sync" (violet) | "Daily Report" (blue) — independent state per tab.
+- **Date Picker:** Defaults to today. Capped at today (no future dates). Changing date auto-loads cache for both tabs.
+- **Cache Badge:** Shows "Saved HH:MM" next to DatePicker when a cache entry exists for the picked date.
+- **Save Button:** Appears when either tab has content. Saves both report text and GitHub rows together.
+
+**GitHub Sync tab:**
+- "Fetch GitHub Activity" button triggers a live fetch.
+- Preview table of tickets with editable key, time, and description fields. Rows can be deleted.
+- "Sync N worklogs to Jira" button creates Jira worklogs.
+- If cache exists: shows "Restored from cache" banner (blue) with Refresh button instead of fetch button. Sync button still visible.
+
+**Daily Report tab:**
+- "Generate Report" button triggers Gemini AI report generation.
+- Editable textarea preview + "Copy to Clipboard" button (turns green on copy).
+- If cache exists: shows "Restored from cache" banner (blue) with Refresh button instead of generate button.
 
 ### B. Settings View
+
 - **API Key Input:** Password-type field with "Show/Hide" toggle.
 - **SP Configuration:** Customize Story Point to Hours ratio.
 - **API Status Check:** Real-time indicator of Gemini API connectivity/quota status.
 
 ### C. Template Editor
+
 - Simple CRUD interface for non-tech users.
 - Fields: Name, Desired Format (Textarea).
 - **Template Wrapper:** Non-tech users can create templates by just pasting their "Desired Format" without writing prompts. The system wraps it into a proper AI instruction automatically.
 
 ## 3. UX States
-- **Loading State:** Shimmer effect or Spinner while AI is processing (show for operations >300ms).
+
+- **Loading State:** Spinner while AI is processing or GitHub is fetching.
+- **Cache Restored:** Blue "Restored from cache · HH:MM" banner with Refresh button per tab.
 - **Error Handling:** Clear messages near the problem — "Invalid API Key", "Jira Session Expired", or "Gemini Quota Exceeded".
-- **Empty State:** Helpful message + CTA when no report exists yet.
-- **Connectivity Indicator:** A small dot (Green/Red) checking Gemini API availability.
+- **Empty State:** Action button shown when no content exists yet.
+- **Save Flash:** Save button briefly shows "Saved ✓" (green) for 2s after saving.
 
 ## 4. Design System
 

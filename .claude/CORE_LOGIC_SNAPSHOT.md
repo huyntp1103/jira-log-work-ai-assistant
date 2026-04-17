@@ -1,7 +1,7 @@
 # Core Logic Snapshot
 
 > **Purpose:** Paste into browser DevTools console to test core logic manually without rebuilding the extension.
-> Last updated: 2026-04-08
+> Last updated: 2026-04-17
 
 ---
 
@@ -128,6 +128,18 @@ const JiraService = {
 };
 
 // ----------------------------------------------------------------
+// SHARED HELPERS
+// ----------------------------------------------------------------
+// Parse a Jira `started` ISO string to YYYY-MM-DD in LOCAL time.
+function toLocalDateStr(isoStr) {
+  const d = new Date(isoStr);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// ----------------------------------------------------------------
 // REPORT ENGINE
 // ----------------------------------------------------------------
 const ReportEngine = {
@@ -167,17 +179,6 @@ const ReportEngine = {
       const current = (totalSpent / goal) * 100;
       const prev    = ((totalSpent - secondsToday / 3600) / goal) * 100;
       return `${Math.round(prev)}% ➔ ${Math.round(current)}%`;
-    };
-
-    // Parse a Jira `started` ISO string to YYYY-MM-DD in LOCAL time.
-    // Required after setting Jira profile timezone to GMT+7: started values now
-    // carry a +0700 offset, so string-prefix matching against YYYY-MM-DD is wrong.
-    const toLocalDateStr = (isoStr) => {
-      const d = new Date(isoStr);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
     };
 
     logData.issues.forEach((issue) => {
@@ -452,7 +453,7 @@ const GitHubService = {
     return (data.worklogs || []).some(
       (l) =>
         l.author.accountId === myAccountId &&
-        l.started.startsWith(targetDate) &&
+        toLocalDateStr(l.started) === targetDate &&
         (l.comment?.content?.[0]?.content?.[0]?.text || '').includes('[AI]')
     );
   },
@@ -462,8 +463,8 @@ const GitHubService = {
 // RUNNER — Daily Report
 // ----------------------------------------------------------------
 async function runDailyTool(dateStr = null) {
-  const baseDate  = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
-  const targetDate = DateHelper.getTargetDate(baseDate);
+  const targetDate = dateStr || DateHelper.formatDate(new Date());
+  const baseDate = new Date(targetDate + 'T00:00:00');
   console.log(`⏳ [1/3] Fetching Jira data for ${targetDate}...`);
 
   const profile    = await JiraService.getMyProfile();

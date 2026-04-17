@@ -52,6 +52,41 @@ describe('DateHelper.getTargetDate', () => {
   });
 });
 
+describe('DateHelper.getReportDate', () => {
+  it('Wednesday work date → Thursday report date', () => {
+    // 2026-04-15 is a Wednesday
+    expect(DateHelper.getReportDate('2026-04-15')).toBe('2026-04-16');
+  });
+
+  it('Friday work date → Monday report date (skip weekend)', () => {
+    // 2026-04-17 is a Friday
+    expect(DateHelper.getReportDate('2026-04-17')).toBe('2026-04-20');
+  });
+
+  it('Saturday work date → Monday report date', () => {
+    // 2026-04-18 is a Saturday
+    expect(DateHelper.getReportDate('2026-04-18')).toBe('2026-04-20');
+  });
+
+  it('Sunday work date → Monday report date', () => {
+    // 2026-04-19 is a Sunday
+    expect(DateHelper.getReportDate('2026-04-19')).toBe('2026-04-20');
+  });
+
+  it('Monday work date → Tuesday report date', () => {
+    // 2026-04-13 is a Monday
+    expect(DateHelper.getReportDate('2026-04-13')).toBe('2026-04-14');
+  });
+
+  it('handles month boundary (April 30 Thursday → May 1 Friday)', () => {
+    expect(DateHelper.getReportDate('2026-04-30')).toBe('2026-05-01');
+  });
+
+  it('handles year boundary (Dec 31 Wednesday → Jan 1 Thursday)', () => {
+    expect(DateHelper.getReportDate('2025-12-31')).toBe('2026-01-01');
+  });
+});
+
 describe('DateHelper.formatDate', () => {
   it('formats date as YYYY-MM-DD', () => {
     const date = new Date(2026, 3, 8);

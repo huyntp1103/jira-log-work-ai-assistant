@@ -28,4 +28,17 @@ export class DateHelper {
     const dd = String(date.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   }
+
+  /**
+   * Given a work date (YYYY-MM-DD), return the next *working* day (YYYY-MM-DD).
+   * Fri → next Mon; Sat → next Mon; otherwise → next day.
+   */
+  static getReportDate(workDateStr) {
+    const d = new Date(workDateStr + 'T00:00:00');
+    const day = d.getDay();
+    if (day === 5) d.setDate(d.getDate() + 3);      // Friday → Monday
+    else if (day === 6) d.setDate(d.getDate() + 2); // Saturday → Monday
+    else d.setDate(d.getDate() + 1);                // Others → next day
+    return DateHelper.formatDate(d);
+  }
 }
