@@ -49,22 +49,76 @@ export class GitHubService {
   }
 
   /**
+   * Fetch a PR via the GitHub API and return its title + body.
+   * Used as a fallback when an event payload lacks the title/body needed
+   * to extract Jira ticket IDs (e.g. PullRequestReviewEvent often omits
+   * the title and never includes the body in the events feed).
+   *
+   * Results are cached in the provided Map to avoid duplicate fetches
+   * across multiple events on the same PR.
+   *
+   * @param {string} url - PR API URL (event.payload.pull_request.url)
+   * @param {string} token
+   * @param {Map<string, string>} cache - keyed by url, value is `${title} ${body}`
+   * @returns {Promise<string>} combined title + body, or '' on failure
+   */
+  static async fetchPrText(url, token, cache) {
+    if (!url) return '';
+    if (cache.has(url)) return cache.get(url);
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github+json',
+        },
+      });
+      if (!res.ok) {
+        cache.set(url, '');
+        return '';
+      }
+      const pr = await res.json();
+      const text = (pr.title || '') + ' ' + (pr.body || '');
+      cache.set(url, text);
+      return text;
+    } catch {
+      cache.set(url, '');
+      return '';
+    }
+  }
+
+  /**
    * Extract Jira ticket map from GitHub events.
    * Events must be in oldest-first order — caller should reverse fetchEventsForDate result.
    * First event per ticket wins. Description is derived from event type + review history.
    *
+   * For PR-related events, when no ticket ID is found in the event's title/branch,
+   * the PR is fetched (when `token` is provided) so the body can be scanned too.
+   *
    * @param {object[]} events - oldest-first
    * @param {{ timeCommit: number, timeApprove: number, timeComment: number }} timeConfig - seconds
-   * @returns {Map<string, { seconds: number, description: string }>}
+   * @param {string} [token] - GitHub PAT, used for PR-body fallback
+   * @returns {Promise<Map<string, { seconds: number, description: string }>>}
    */
-  static extractTicketMap(events, timeConfig) {
+  static async extractTicketMap(events, timeConfig, token) {
+    const prTextCache = new Map();
+
+    // Resolve a PR-event's text: prefer payload title+head.ref; if no ticket ID is found,
+    // fetch the PR and use title+body.
+    const resolvePrIds = async (event) => {
+      const pr = event.payload.pull_request;
+      const inline = (pr?.title || '') + ' ' + (pr?.head?.ref || '');
+      const inlineIds = extractIds(inline);
+      if (inlineIds.length > 0 || !token || !pr?.url) return inlineIds;
+      const remote = await GitHubService.fetchPrText(pr.url, token, prTextCache);
+      return extractIds(remote);
+    };
+
     // Pass 1: collect tickets from review-related events (PR opened/merged, review, comment)
     const reviewTickets = new Set();
     for (const event of events) {
       if (['PullRequestReviewEvent', 'PullRequestReviewCommentEvent', 'PullRequestEvent'].includes(event.type)) {
-        const pr = event.payload.pull_request;
-        const text = (pr?.title || '') + ' ' + (pr?.head?.ref || '');
-        extractIds(text).forEach((id) => reviewTickets.add(id));
+        const ids = await resolvePrIds(event);
+        ids.forEach((id) => reviewTickets.add(id));
       }
     }
 
@@ -96,8 +150,7 @@ export class GitHubService {
         if (['opened', 'merged', 'reopened'].includes(action)) {
           eventType = 'review';
           eventSeconds = timeConfig.timeApprove;
-          const pr = event.payload.pull_request;
-          ticketIds = extractIds((pr?.title || '') + ' ' + (pr?.head?.ref || ''));
+          ticketIds = await resolvePrIds(event);
         }
       }
       // CASE 4: Review
@@ -105,21 +158,20 @@ export class GitHubService {
         const state = event.payload.review?.state;
         eventType = 'review';
         eventSeconds = state === 'approved' ? timeConfig.timeApprove : timeConfig.timeComment;
-        const pr = event.payload.pull_request;
-        ticketIds = extractIds((pr?.title || '') + ' ' + (pr?.head?.ref || ''));
+        ticketIds = await resolvePrIds(event);
       }
       // CASE 5: Review comment
       else if (event.type === 'PullRequestReviewCommentEvent') {
         eventType = 'review';
         eventSeconds = timeConfig.timeComment;
-        ticketIds = extractIds(event.payload.pull_request?.title || '');
+        ticketIds = await resolvePrIds(event);
       }
 
       for (const id of ticketIds) {
         if (result.has(id)) continue; // first occurrence wins
 
         const description =
-          eventType === 'review'      ? 'Review code, discuss technical solutions' :
+          eventType === 'review'      ? 'Review code' :
           reviewTickets.has(id)       ? 'Resolve comment feedbacks, write tests, write API docs, self-test' :
                                         'Implement based on solution design & implementation plan, self-review, self-test';
 
@@ -131,7 +183,7 @@ export class GitHubService {
   }
 
   /**
-   * Check if a Jira ticket already has an [Generated by AI] worklog on targetDate.
+   * Check if a Jira ticket already has an [Generated by Log Work tool] worklog on targetDate.
    * @param {string} domain
    * @param {string} issueKey
    * @param {string} targetDate - YYYY-MM-DD
@@ -149,7 +201,7 @@ export class GitHubService {
       (l) =>
         l.author.accountId === myAccountId &&
         l.started.startsWith(targetDate) &&
-        (l.comment?.content?.[0]?.content?.[0]?.text || '').includes('[Generated by AI]')
+        (l.comment?.content?.[0]?.content?.[0]?.text || '').includes('[Generated by Log Work tool]')
     );
   }
 }

@@ -8,7 +8,7 @@ const TIME_CONFIG = {
 };
 
 describe('GitHubService.extractTicketMap', () => {
-  it('extracts ticket from PushEvent commit messages', () => {
+  it('extracts ticket from PushEvent commit messages', async () => {
     const events = [
       {
         type: 'PushEvent',
@@ -18,7 +18,7 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.has('UP-123')).toBe(true);
     expect(result.get('UP-123').seconds).toBe(3600);
     expect(result.get('UP-123').description).toBe(
@@ -26,30 +26,30 @@ describe('GitHubService.extractTicketMap', () => {
     );
   });
 
-  it('extracts ticket from CreateEvent branch name', () => {
+  it('extracts ticket from CreateEvent branch name', async () => {
     const events = [
       {
         type: 'CreateEvent',
         payload: { ref_type: 'branch', ref: 'feature/PROJ-456-new-api' },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.has('PROJ-456')).toBe(true);
     expect(result.get('PROJ-456').seconds).toBe(3600);
   });
 
-  it('ignores CreateEvent for tags', () => {
+  it('ignores CreateEvent for tags', async () => {
     const events = [
       {
         type: 'CreateEvent',
         payload: { ref_type: 'tag', ref: 'v1.0.0-PROJ-789' },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.size).toBe(0);
   });
 
-  it('extracts ticket from PullRequestEvent (opened)', () => {
+  it('extracts ticket from PullRequestEvent (opened)', async () => {
     const events = [
       {
         type: 'PullRequestEvent',
@@ -62,13 +62,13 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.has('UP-100')).toBe(true);
     expect(result.get('UP-100').seconds).toBe(900); // timeApprove
-    expect(result.get('UP-100').description).toBe('Review code, discuss technical solutions');
+    expect(result.get('UP-100').description).toBe('Review code');
   });
 
-  it('ignores PullRequestEvent with non-matching action', () => {
+  it('ignores PullRequestEvent with non-matching action', async () => {
     const events = [
       {
         type: 'PullRequestEvent',
@@ -81,11 +81,11 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.size).toBe(0);
   });
 
-  it('extracts ticket from PullRequestReviewEvent', () => {
+  it('extracts ticket from PullRequestReviewEvent', async () => {
     const events = [
       {
         type: 'PullRequestReviewEvent',
@@ -98,13 +98,13 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.has('CORE-55')).toBe(true);
     expect(result.get('CORE-55').seconds).toBe(900); // timeApprove for approved
-    expect(result.get('CORE-55').description).toBe('Review code, discuss technical solutions');
+    expect(result.get('CORE-55').description).toBe('Review code');
   });
 
-  it('uses timeComment for non-approved reviews', () => {
+  it('uses timeComment for non-approved reviews', async () => {
     const events = [
       {
         type: 'PullRequestReviewEvent',
@@ -117,11 +117,11 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.get('CORE-55').seconds).toBe(900); // timeComment
   });
 
-  it('extracts ticket from PullRequestReviewCommentEvent', () => {
+  it('extracts ticket from PullRequestReviewCommentEvent', async () => {
     const events = [
       {
         type: 'PullRequestReviewCommentEvent',
@@ -130,13 +130,13 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.has('DATA-77')).toBe(true);
     expect(result.get('DATA-77').seconds).toBe(900);
-    expect(result.get('DATA-77').description).toBe('Review code, discuss technical solutions');
+    expect(result.get('DATA-77').description).toBe('Review code');
   });
 
-  it('first occurrence wins — earlier event keeps its data', () => {
+  it('first occurrence wins — earlier event keeps its data', async () => {
     const events = [
       // oldest first
       {
@@ -157,11 +157,11 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.get('UP-200').seconds).toBe(3600); // commit time, not review time
   });
 
-  it('sets "Resolve comment feedbacks" description for push tickets that have reviews', () => {
+  it('sets "Resolve comment feedbacks" description for push tickets that have reviews', async () => {
     const events = [
       // Pass 1 collects CORE-10 as review ticket from the review event
       {
@@ -178,11 +178,11 @@ describe('GitHubService.extractTicketMap', () => {
       // Actually review is first in array, so it wins. Let's reverse:
     ];
     // The review event is first, so it gets "Review code..." description
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
-    expect(result.get('CORE-10').description).toBe('Review code, discuss technical solutions');
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
+    expect(result.get('CORE-10').description).toBe('Review code');
   });
 
-  it('gives review-influenced description to push events when ticket has review activity', () => {
+  it('gives review-influenced description to push events when ticket has review activity', async () => {
     // Push event comes first, but ticket also has review activity (collected in pass 1)
     const events = [
       {
@@ -199,14 +199,14 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     // Push is first occurrence, but AB-10 is in reviewTickets (from comment event in pass 1)
     expect(result.get('AB-10').description).toBe(
       'Resolve comment feedbacks, write tests, write API docs, self-test'
     );
   });
 
-  it('handles multiple tickets in one commit message', () => {
+  it('handles multiple tickets in one commit message', async () => {
     const events = [
       {
         type: 'PushEvent',
@@ -216,12 +216,12 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.has('UP-1')).toBe(true);
     expect(result.has('UP-2')).toBe(true);
   });
 
-  it('deduplicates tickets within a single event', () => {
+  it('deduplicates tickets within a single event', async () => {
     const events = [
       {
         type: 'PushEvent',
@@ -234,17 +234,17 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.size).toBe(1);
     expect(result.has('UP-50')).toBe(true);
   });
 
-  it('returns empty map when no events', () => {
-    const result = GitHubService.extractTicketMap([], TIME_CONFIG);
+  it('returns empty map when no events', async () => {
+    const result = await GitHubService.extractTicketMap([], TIME_CONFIG);
     expect(result.size).toBe(0);
   });
 
-  it('ignores events without Jira ticket IDs', () => {
+  it('ignores events without Jira ticket IDs', async () => {
     const events = [
       {
         type: 'PushEvent',
@@ -254,8 +254,92 @@ describe('GitHubService.extractTicketMap', () => {
         },
       },
     ];
-    const result = GitHubService.extractTicketMap(events, TIME_CONFIG);
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
     expect(result.size).toBe(0);
+  });
+
+  it('fetches PR body when title and head.ref have no ticket ID', async () => {
+    const events = [
+      {
+        type: 'PullRequestReviewEvent',
+        payload: {
+          review: { state: 'approved' },
+          pull_request: {
+            url: 'https://api.github.com/repos/Org/repo/pulls/4170',
+            head: { ref: 'feat/dd-grpc-logging' },
+          },
+        },
+      },
+    ];
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        title: 'feat: gRPC logging',
+        body: 'Implements UP-70507 — adds DataDog logging to gRPC handlers.',
+      }),
+    }));
+
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG, 'token');
+    expect(result.has('UP-70507')).toBe(true);
+    expect(result.get('UP-70507').description).toBe('Review code');
+  });
+
+  it('caches PR fetches across multiple events on the same PR', async () => {
+    const events = [
+      {
+        type: 'PullRequestReviewEvent',
+        payload: {
+          review: { state: 'approved' },
+          pull_request: {
+            url: 'https://api.github.com/repos/Org/repo/pulls/1',
+            head: { ref: 'feat/no-ticket' },
+          },
+        },
+      },
+      {
+        type: 'PullRequestReviewCommentEvent',
+        payload: {
+          pull_request: {
+            url: 'https://api.github.com/repos/Org/repo/pulls/1',
+            head: { ref: 'feat/no-ticket' },
+          },
+        },
+      },
+    ];
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ title: '', body: 'Fixes UP-9999' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG, 'token');
+    expect(result.has('UP-9999')).toBe(true);
+    // Pass 1 + Pass 2 each touch both events; cache should keep network calls to 1
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips PR fetch when no token is provided', async () => {
+    const events = [
+      {
+        type: 'PullRequestReviewEvent',
+        payload: {
+          review: { state: 'approved' },
+          pull_request: {
+            url: 'https://api.github.com/repos/Org/repo/pulls/1',
+            head: { ref: 'feat/no-ticket' },
+          },
+        },
+      },
+    ];
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await GitHubService.extractTicketMap(events, TIME_CONFIG);
+    expect(result.size).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

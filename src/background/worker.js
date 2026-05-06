@@ -130,7 +130,7 @@ export async function handleGitHubSyncPreview({ date }) {
   ]);
 
   // Oldest-first so first-occurrence logic picks the earliest action
-  const ticketMap = GitHubService.extractTicketMap([...events].reverse(), timeConfig);
+  const ticketMap = await GitHubService.extractTicketMap([...events].reverse(), timeConfig, githubToken);
 
   if (ticketMap.size === 0) {
     return { rows: [] };
