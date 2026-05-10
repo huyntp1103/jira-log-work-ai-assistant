@@ -35,6 +35,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'JIRA_WORKLOG_UPDATE') {
+    handleJiraWorklogUpdate(message)
+      .then(() => sendResponse({ type: 'JIRA_WORKLOG_UPDATED' }))
+      .catch((error) => sendResponse({ type: 'JIRA_WORKLOG_ERROR', error: error.message }));
+    return true;
+  }
+
+  if (message.type === 'JIRA_WORKLOG_PREVIEW') {
+    handleJiraWorklogPreview(message)
+      .then((result) => sendResponse({ type: 'JIRA_WORKLOG_DATA', ...result }))
+      .catch((error) => sendResponse({ type: 'JIRA_WORKLOG_ERROR', error: error.message }));
+    return true;
+  }
+
   if (message.type === 'GITHUB_SYNC_PREVIEW') {
     handleGitHubSyncPreview(message)
       .then((result) => sendResponse({ type: 'GITHUB_SYNC_DATA', ...result }))
@@ -101,6 +115,22 @@ export async function handleGenerateReport({ date, templateId }) {
   console.log('[BG] Gemini response received, length:', formattedText.length);
 
   return { report, formattedText };
+}
+
+export async function handleJiraWorklogUpdate({ issueKey, worklogId, timeSpentSeconds, comment }) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first.');
+  await JiraService.updateWorklog(domain, issueKey, worklogId, { timeSpentSeconds, comment });
+}
+
+export async function handleJiraWorklogPreview({ date }) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first so the extension can detect your domain.');
+
+  const targetDate = date || DateHelper.formatDate(new Date());
+  const profile = await JiraService.getMyProfile(domain);
+  const rows = await JiraService.fetchMyWorklogs(domain, profile.accountId, targetDate);
+  return { rows, domain };
 }
 
 export async function handleGitHubSyncPreview({ date }) {

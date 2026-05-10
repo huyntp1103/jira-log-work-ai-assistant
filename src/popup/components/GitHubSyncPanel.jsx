@@ -1,31 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StorageService } from '../../services/storage.js';
-
-/**
- * Convert seconds to human-readable string: "1h 30m", "45m", "2h"
- */
-function fmtTime(seconds) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.round((seconds % 3600) / 60);
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
-}
-
-/**
- * Parse time string back to seconds. Accepts: "1h 30m", "1h", "45m", "90" (treated as minutes)
- */
-function parseTime(str) {
-  const hMatch = str.match(/(\d+)\s*h/);
-  const mMatch = str.match(/(\d+)\s*m/);
-  if (!hMatch && !mMatch) {
-    const num = parseInt(str, 10);
-    return isNaN(num) ? null : num * 60;
-  }
-  const h = hMatch ? parseInt(hMatch[1], 10) : 0;
-  const m = mMatch ? parseInt(mMatch[1], 10) : 0;
-  return (h * 3600) + (m * 60);
-}
+import { fmtTime, parseTime } from '../../utils/time.js';
 
 export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = null, onRowsChange }) {
   const [rows, setRows] = useState(

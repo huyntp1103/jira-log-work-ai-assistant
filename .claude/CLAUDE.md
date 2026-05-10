@@ -37,7 +37,6 @@ It bridges the gap between Jira activity (worklogs/sprints) and communication pl
 - **`src/utils/progress.js`** — Progress % calculation helpers.
 - **`src/background/worker.js`** — Service worker: handles `GENERATE_REPORT`, `TEST_GEMINI`, `GITHUB_SYNC_PREVIEW`, `GITHUB_SYNC_CONFIRM` messages.
 - **`src/content/`** — Content script injected into Jira tabs (detects domain).
-- **`.claude/CORE_LOGIC_SNAPSHOT.md`** — Standalone browser-console version of core logic for manual testing. **Must be kept in sync** when modifying report engine, GitHub sync, or Jira service logic.
 
 ## Key Implementation Details
 
@@ -75,7 +74,7 @@ AND (
 - **Domain Scoping:** Permissions limited to `*.atlassian.net` and `generativelanguage.googleapis.com`.
 
 ## Development Rules
-- **Sync the snapshot:** When modifying `report-engine.js`, `github.js`, or `jira.js` core logic, apply the same change to `.claude/CORE_LOGIC_SNAPSHOT.md`.
+
 - **After every code change, run this exact sequence:**
   1. `nvm use` — switch to the project's Node version
   2. `npm run test` — verify all unit tests pass (write new tests first if needed). Fix failing tests or code before proceeding.

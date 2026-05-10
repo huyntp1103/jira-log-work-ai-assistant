@@ -6,6 +6,7 @@ import Settings from './components/Settings.jsx';
 import DatePicker from './components/DatePicker.jsx';
 import ReportPreview from './components/ReportPreview.jsx';
 import GitHubSyncPanel from './components/GitHubSyncPanel.jsx';
+import WorklogPreview from './components/WorklogPreview.jsx';
 
 export default function App() {
   const [view, setView] = useState('main');
@@ -165,6 +166,8 @@ export default function App() {
         {/* ── Report tab ── */}
         {tab === 'report' && (
           <div className="space-y-3">
+            <WorklogPreview key={date} date={date} />
+
             {reportFromCache ? (
               <CacheBanner savedAt={cacheInfo?.savedAt} onRefresh={handleRefreshReport} color="blue" />
             ) : (
