@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fmtTime, parseTime } from '../../utils/time.js';
 
-export default function WorklogPreview({ date }) {
+export default function WorklogPreview({ date, expanded = true, onToggle }) {
   const [rows, setRows] = useState(null);
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
@@ -92,7 +92,13 @@ export default function WorklogPreview({ date }) {
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-3.5 space-y-2">
-      <div className="flex items-center justify-between">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between text-left"
+        aria-expanded={expanded}
+        aria-label={expanded ? 'Collapse worklogs' : 'Expand worklogs'}
+      >
         <h3 className="text-[12px] font-semibold text-slate-700">
           Jira Worklogs
           {!loading && rows && rows.length > 0 && (
@@ -101,9 +107,17 @@ export default function WorklogPreview({ date }) {
             </span>
           )}
         </h3>
-      </div>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          className={`w-4 h-4 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+        >
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
+        </svg>
+      </button>
 
-      {loading && (
+      {expanded && loading && (
         <div className="space-y-1.5">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-9 rounded bg-slate-100 animate-pulse" />
@@ -111,7 +125,7 @@ export default function WorklogPreview({ date }) {
         </div>
       )}
 
-      {error && (
+      {expanded && error && (
         <div className="flex items-start gap-2 p-2.5 rounded-md bg-red-50 border border-red-200 text-[12px] text-red-700">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 shrink-0 mt-0.5">
             <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
@@ -120,11 +134,11 @@ export default function WorklogPreview({ date }) {
         </div>
       )}
 
-      {!loading && !error && rows && rows.length === 0 && (
+      {expanded && !loading && !error && rows && rows.length === 0 && (
         <div className="text-[12px] text-slate-400 py-2">No worklogs logged on this date.</div>
       )}
 
-      {!loading && !error && rows && rows.length > 0 && (
+      {expanded && !loading && !error && rows && rows.length > 0 && (
         <ul className="divide-y divide-slate-100">
           {rows.map((r) => {
             const dirty = isDirty(r);

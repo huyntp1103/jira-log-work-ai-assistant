@@ -14,6 +14,7 @@ export default function App() {
   const [date, setDate] = useState(DateHelper.formatDate(new Date()));
   const [githubFetchKey, setGithubFetchKey] = useState(0);
   const [githubRows, setGithubRows] = useState(null);
+  const [worklogExpanded, setWorklogExpanded] = useState(true);
 
   const [cacheInfo, setCacheInfo] = useState(null);      // { savedAt } | null
   const [reportFromCache, setReportFromCache] = useState(false);
@@ -111,7 +112,7 @@ export default function App() {
       {/* Header */}
       <div className="bg-gradient-to-r from-violet-600 to-blue-500 px-5 py-3.5 flex items-center justify-between">
         <div>
-          <h1 className="text-white text-sm font-semibold">Jira Daily Report AI Assistant</h1>
+          <h1 className="text-white text-sm font-semibold">Daily Report AI Assistant</h1>
           {/* <p className="text-blue-100 text-[11px] mt-0.5">AI-powered daily reports</p> */}
         </div>
         <button
@@ -166,13 +167,18 @@ export default function App() {
         {/* ── Report tab ── */}
         {tab === 'report' && (
           <div className="space-y-3">
-            <WorklogPreview key={date} date={date} />
+            <WorklogPreview
+              key={date}
+              date={date}
+              expanded={worklogExpanded}
+              onToggle={() => setWorklogExpanded((e) => !e)}
+            />
 
             {reportFromCache ? (
               <CacheBanner savedAt={cacheInfo?.savedAt} onRefresh={handleRefreshReport} color="blue" />
             ) : (
               <button
-                onClick={() => generate(date)}
+                onClick={() => { setWorklogExpanded(false); generate(date); }}
                 disabled={loading}
                 className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
