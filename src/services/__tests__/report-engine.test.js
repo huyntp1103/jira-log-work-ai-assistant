@@ -46,6 +46,8 @@ function makeWorklog(accountId, started, timeSpentSeconds) {
 describe('ReportEngine.generate', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // Default: pass issues through unchanged (no 20-cap fallback needed).
+    JiraService.resolveWorklogsForDate.mockImplementation((_, issues) => Promise.resolve(issues));
   });
 
   it('categorizes first-time logged issues as "Done Yesterday"', async () => {
@@ -98,11 +100,11 @@ describe('ReportEngine.generate', () => {
     expect(report['Plan for Today'][0].Title).toBe('Task UP-3');
   });
 
-  it('excludes logged issues from "Plan for Today" (deduplication)', async () => {
+  it('excludes logged non-"In Progress" issues from "Plan for Today" (deduplication)', async () => {
     const worklogs = [
       makeWorklog('user-123', '2026-04-08T10:00:00.000+0700', 7200),
     ];
-    const issue = makeIssue('UP-4', { worklogs, status: 'In Progress', sp: 2 });
+    const issue = makeIssue('UP-4', { worklogs, status: 'In Review', sp: 2 });
 
     JiraService.searchJql
       .mockResolvedValueOnce({ issues: [issue] })  // logged
@@ -113,6 +115,24 @@ describe('ReportEngine.generate', () => {
 
     expect(report['Done Yesterday']).toHaveLength(1);
     expect(report['Plan for Today']).toHaveLength(0);
+  });
+
+  it('always keeps "In Progress" issues in "Plan for Today" even when logged today', async () => {
+    const worklogs = [
+      makeWorklog('user-123', '2026-04-08T10:00:00.000+0700', 7200),
+    ];
+    const issue = makeIssue('UP-7', { worklogs, status: 'In Progress', sp: 2 });
+
+    JiraService.searchJql
+      .mockResolvedValueOnce({ issues: [issue] })  // logged
+      .mockResolvedValueOnce({ issues: [issue] }); // also in plan
+
+    const engine = new ReportEngine(makeConfig());
+    const report = await engine.generate();
+
+    expect(report['Done Yesterday']).toHaveLength(1);
+    expect(report['Plan for Today']).toHaveLength(1);
+    expect(report['Plan for Today'][0].Title).toBe('Task UP-7');
   });
 
   it('skips issues where no actual time logged on targetDate', async () => {

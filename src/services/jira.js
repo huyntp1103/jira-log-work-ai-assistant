@@ -61,6 +61,45 @@ export class JiraService {
    * @param {string} accountId - the user's Jira accountId
    * @param {string} date - YYYY-MM-DD
    */
+  /**
+   * For each issue, resolve its full set of worklogs for the target date.
+   * If the embedded `worklog.worklogs` array hit the 20-item cap, re-fetch via
+   * `/rest/api/3/issue/{key}/worklog?startedAfter=...&startedBefore=...` so
+   * recent worklogs aren't truncated.
+   *
+   * Returns the same issue objects with `fields.worklog.worklogs` replaced.
+   *
+   * @param {string} domain
+   * @param {object[]} issues - issues from a JQL search that requested `worklog`
+   * @param {string} date - YYYY-MM-DD (GMT+7)
+   */
+  static async resolveWorklogsForDate(domain, issues, date) {
+    const dayStartMs = new Date(`${date}T00:00:00+0700`).getTime();
+    const dayEndMs = dayStartMs + 24 * 60 * 60 * 1000;
+
+    return Promise.all(
+      (issues || []).map(async (issue) => {
+        const embedded = issue.fields?.worklog?.worklogs || [];
+        if (embedded.length < 20) return issue;
+        try {
+          const wl = await this.fetchJira(
+            domain,
+            `/rest/api/3/issue/${issue.key}/worklog?startedAfter=${dayStartMs}&startedBefore=${dayEndMs}`
+          );
+          return {
+            ...issue,
+            fields: {
+              ...issue.fields,
+              worklog: { worklogs: wl.worklogs || embedded },
+            },
+          };
+        } catch {
+          return issue;
+        }
+      })
+    );
+  }
+
   static async fetchMyWorklogs(domain, accountId, date) {
     const data = await this.searchJql(
       domain,
@@ -68,32 +107,11 @@ export class JiraService {
       ['summary', 'worklog']
     );
 
-    // GMT+7 day window in epoch ms (passed to Jira's startedAfter/startedBefore).
-    const dayStartMs = new Date(`${date}T00:00:00+0700`).getTime();
-    const dayEndMs = dayStartMs + 24 * 60 * 60 * 1000;
-
-    // For issues whose embedded worklog array is at the 20-item cap, the recent
-    // worklogs may be truncated (Jira returns oldest-first). Re-fetch via the
-    // dedicated worklog endpoint, scoped to the target day, to get the full set.
-    const issuesWithFullLogs = await Promise.all(
-      (data.issues || []).map(async (issue) => {
-        const embedded = issue.fields?.worklog?.worklogs || [];
-        if (embedded.length < 20) return { issue, logs: embedded };
-        try {
-          const wl = await this.fetchJira(
-            domain,
-            `/rest/api/3/issue/${issue.key}/worklog?startedAfter=${dayStartMs}&startedBefore=${dayEndMs}`
-          );
-          return { issue, logs: wl.worklogs || embedded };
-        } catch {
-          return { issue, logs: embedded };
-        }
-      })
-    );
+    const issues = await this.resolveWorklogsForDate(domain, data.issues || [], date);
 
     const rows = [];
-    for (const { issue, logs } of issuesWithFullLogs) {
-      for (const l of logs) {
+    for (const issue of issues) {
+      for (const l of issue.fields?.worklog?.worklogs || []) {
         if (l.author?.accountId !== accountId) continue;
         // Local-time match — Jira `started` carries +0700, parse via Date
         const d = new Date(l.started);

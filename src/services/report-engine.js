@@ -46,6 +46,14 @@ export class ReportEngine {
       ),
     ]);
 
+    // For issues whose embedded worklog array is at the 20-item cap, re-fetch
+    // the worklogs scoped to the target day so totals match the preview.
+    const logIssues = await JiraService.resolveWorklogsForDate(
+      this.domain,
+      logData.issues || [],
+      this.targetDate
+    );
+
     const loggedIssueKeys = new Set();
 
     const getParentSummary = (issue) =>
@@ -62,7 +70,7 @@ export class ReportEngine {
       return `${yyyy}-${mm}-${dd}`;
     };
 
-    logData.issues.forEach((issue) => {
+    logIssues.forEach((issue) => {
       const myLogs = issue.fields.worklog.worklogs.filter(
         (l) => l.author.accountId === this.myId
       );
@@ -93,23 +101,25 @@ export class ReportEngine {
     });
 
     planData.issues.forEach((issue) => {
-      if (!loggedIssueKeys.has(issue.key)) {
-        const sp = issue.fields[this.spField] || 0;
-        const worklogs = issue.fields.worklog?.worklogs || [];
-        const myTotalSpent = worklogs
-          .filter((l) => l.author.accountId === this.myId)
-          .reduce((acc, l) => acc + l.timeSpentSeconds, 0);
-        const status = issue.fields.status.name;
+      const status = issue.fields.status.name;
+      // "In Progress" tickets are always planned for today, even if already logged.
+      // Other statuses are deduplicated against today's logs.
+      if (status !== 'In Progress' && loggedIssueKeys.has(issue.key)) return;
 
-        this.report['Plan for Today'].push({
-          TaskLink: `https://${this.domain}/browse/${issue.key}`,
-          Title: issue.fields.summary,
-          ParentSummary: getParentSummary(issue),
-          Status: status,
-          SP: sp,
-          Progress: currentProgress(myTotalSpent, sp, this.hoursPerPoint, status) + '%',
-        });
-      }
+      const sp = issue.fields[this.spField] || 0;
+      const worklogs = issue.fields.worklog?.worklogs || [];
+      const myTotalSpent = worklogs
+        .filter((l) => l.author.accountId === this.myId)
+        .reduce((acc, l) => acc + l.timeSpentSeconds, 0);
+
+      this.report['Plan for Today'].push({
+        TaskLink: `https://${this.domain}/browse/${issue.key}`,
+        Title: issue.fields.summary,
+        ParentSummary: getParentSummary(issue),
+        Status: status,
+        SP: sp,
+        Progress: currentProgress(myTotalSpent, sp, this.hoursPerPoint, status) + '%',
+      });
     });
     console.log('Generated report data:', this.report);
     return this.report;
