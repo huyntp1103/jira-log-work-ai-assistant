@@ -7,14 +7,21 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
+  // Add-worklog form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [recentTickets, setRecentTickets] = useState(null); // null = not loaded yet
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [recentError, setRecentError] = useState('');
+  const [newKey, setNewKey] = useState('');
+  const [newTime, setNewTime] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  const loadWorklogs = () => {
     setLoading(true);
     setError('');
-    setRows(null);
-
     chrome.runtime.sendMessage({ type: 'JIRA_WORKLOG_PREVIEW', date }, (res) => {
-      if (cancelled) return;
       setLoading(false);
       if (chrome.runtime.lastError) {
         setError(chrome.runtime.lastError.message);
@@ -28,15 +35,86 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
         ...r,
         timeStr: fmtTime(r.timeSpentSeconds),
         commentDraft: r.comment,
-        saveStatus: null, // 'saving' | 'saved' | 'error' | null
+        saveStatus: null,
         saveError: '',
       }));
       setRows(initial);
       setDomain(res?.domain || '');
     });
+  };
 
-    return () => { cancelled = true; };
+  useEffect(() => {
+    setRows(null);
+    loadWorklogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
+
+  const loadRecentTickets = () => {
+    setRecentLoading(true);
+    setRecentError('');
+    chrome.runtime.sendMessage({ type: 'JIRA_RECENT_TICKETS', days: 7 }, (res) => {
+      setRecentLoading(false);
+      if (chrome.runtime.lastError) {
+        setRecentError(chrome.runtime.lastError.message);
+        return;
+      }
+      if (res?.type === 'JIRA_WORKLOG_ERROR') {
+        setRecentError(res.error);
+        return;
+      }
+      setRecentTickets(res?.tickets || []);
+    });
+  };
+
+  const openAddForm = () => {
+    setShowAddForm(true);
+    setCreateError('');
+    if (recentTickets === null && !recentLoading) loadRecentTickets();
+  };
+
+  const closeAddForm = () => {
+    setShowAddForm(false);
+    setNewKey('');
+    setNewTime('');
+    setNewDescription('');
+    setCreateError('');
+  };
+
+  const handleCreate = () => {
+    const parsed = parseTime(newTime);
+    if (!newKey) {
+      setCreateError('Pick a ticket first.');
+      return;
+    }
+    if (parsed == null || parsed <= 0) {
+      setCreateError('Enter a valid time (e.g. 1h 30m).');
+      return;
+    }
+    setCreating(true);
+    setCreateError('');
+    chrome.runtime.sendMessage(
+      {
+        type: 'JIRA_WORKLOG_CREATE',
+        issueKey: newKey,
+        timeSpentSeconds: parsed,
+        description: newDescription,
+        date,
+      },
+      (res) => {
+        setCreating(false);
+        if (chrome.runtime.lastError) {
+          setCreateError(chrome.runtime.lastError.message);
+          return;
+        }
+        if (res?.type === 'JIRA_WORKLOG_ERROR') {
+          setCreateError(res.error);
+          return;
+        }
+        closeAddForm();
+        loadWorklogs();
+      }
+    );
+  };
 
   const totalSeconds = (rows || []).reduce((acc, r) => acc + r.timeSpentSeconds, 0);
 
@@ -134,7 +212,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
         </div>
       )}
 
-      {expanded && !loading && !error && rows && rows.length === 0 && (
+      {expanded && !loading && !error && rows && rows.length === 0 && !showAddForm && (
         <div className="text-[12px] text-slate-400 py-2">No worklogs logged on this date.</div>
       )}
 
@@ -209,6 +287,96 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
             );
           })}
         </ul>
+      )}
+
+      {expanded && !loading && !error && !showAddForm && (
+        <button
+          type="button"
+          onClick={openAddForm}
+          className="w-full mt-1 py-1.5 rounded border border-dashed border-slate-300 text-[12px] font-medium text-slate-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+            <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+          </svg>
+          Log new time
+        </button>
+      )}
+
+      {expanded && showAddForm && (
+        <div className="mt-1 p-2.5 rounded-md border border-slate-200 bg-slate-50 space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">New worklog</h4>
+            <button
+              type="button"
+              onClick={closeAddForm}
+              className="text-[11px] text-slate-400 hover:text-slate-700"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] text-slate-500">Ticket (from your last 7 days)</label>
+            {recentLoading ? (
+              <div className="h-7 rounded bg-slate-200 animate-pulse" />
+            ) : recentError ? (
+              <div className="text-[11px] text-red-600">{recentError}</div>
+            ) : (
+              <select
+                value={newKey}
+                onChange={(e) => { setNewKey(e.target.value); setCreateError(''); }}
+                className="w-full px-2 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">— Select a ticket —</option>
+                {(recentTickets || []).map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.key}: {t.summary}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-slate-500 shrink-0">Time:</label>
+            <input
+              type="text"
+              value={newTime}
+              onChange={(e) => { setNewTime(e.target.value); setCreateError(''); }}
+              placeholder="1h 30m"
+              className="w-20 px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-center font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <textarea
+            value={newDescription}
+            onChange={(e) => { setNewDescription(e.target.value); setCreateError(''); }}
+            placeholder="Description (optional)"
+            rows={2}
+            className="w-full px-2 py-1.5 rounded border border-slate-200 bg-white text-[12px] text-slate-600 leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+
+          {createError && (
+            <div className="text-[11px] text-red-600">{createError}</div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={creating || !newKey || !newTime.trim()}
+            className="w-full py-1.5 rounded text-[12px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+          >
+            {creating ? (
+              <>
+                <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Creating…
+              </>
+            ) : 'Create worklog'}
+          </button>
+        </div>
       )}
     </div>
   );

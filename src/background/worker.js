@@ -49,6 +49,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'JIRA_RECENT_TICKETS') {
+    handleJiraRecentTickets(message)
+      .then((result) => sendResponse({ type: 'JIRA_RECENT_TICKETS_DATA', ...result }))
+      .catch((error) => sendResponse({ type: 'JIRA_WORKLOG_ERROR', error: error.message }));
+    return true;
+  }
+
+  if (message.type === 'JIRA_WORKLOG_CREATE') {
+    handleJiraWorklogCreate(message)
+      .then(() => sendResponse({ type: 'JIRA_WORKLOG_CREATED' }))
+      .catch((error) => sendResponse({ type: 'JIRA_WORKLOG_ERROR', error: error.message }));
+    return true;
+  }
+
   if (message.type === 'JIRA_WORKLOG_UPDATE') {
     handleJiraWorklogUpdate(message)
       .then(() => sendResponse({ type: 'JIRA_WORKLOG_UPDATED' }))
@@ -219,6 +233,28 @@ export async function handleJiraTrackerTasks({ tracker, allAssignees = false }) 
   return { rows, domain };
 }
 
+export async function handleJiraRecentTickets({ days = 7 } = {}) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first.');
+  const profile = await JiraService.getMyProfile(domain);
+  const tickets = await JiraService.fetchRecentTickets(domain, profile.accountId, days);
+  return { tickets };
+}
+
+export async function handleJiraWorklogCreate({ issueKey, timeSpentSeconds, description, date }) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first.');
+  if (!issueKey) throw new Error('Pick a ticket first.');
+  if (!timeSpentSeconds || timeSpentSeconds <= 0) throw new Error('Time must be greater than 0.');
+
+  const targetDate = date || DateHelper.formatDate(new Date());
+  await JiraService.createWorklog(domain, issueKey, {
+    timeSpentSeconds,
+    targetDate,
+    description: description || '',
+  });
+}
+
 export async function handleJiraWorklogUpdate({ issueKey, worklogId, timeSpentSeconds, comment }) {
   const domain = await StorageService.getJiraDomain();
   if (!domain) throw new Error('Please open a Jira tab first.');
@@ -301,7 +337,7 @@ async function handleGitHubSyncConfirm({ worklogs, date }) {
 
   await Promise.all(
     worklogs.map(({ key, seconds, description }) =>
-      JiraService.createWorklog(domain, key, { timeSpentSeconds: seconds, targetDate, description })
+      JiraService.createWorklog(domain, key, { timeSpentSeconds: seconds, targetDate, description, addToolPrefix: true })
     )
   );
 
