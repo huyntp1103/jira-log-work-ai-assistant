@@ -7,10 +7,11 @@ import DatePicker from './components/DatePicker.jsx';
 import ReportPreview from './components/ReportPreview.jsx';
 import GitHubSyncPanel from './components/GitHubSyncPanel.jsx';
 import WorklogPreview from './components/WorklogPreview.jsx';
+import JiraTrackerPanel from './components/JiraTrackerPanel.jsx';
 
 export default function App() {
   const [view, setView] = useState('main');
-  const [tab, setTab] = useState('github'); // 'report' | 'github'
+  const [tab, setTab] = useState('tasks'); // 'tasks' | 'github' | 'report'
   const [date, setDate] = useState(DateHelper.formatDate(new Date()));
   const [githubFetchKey, setGithubFetchKey] = useState(0);
   const [githubRows, setGithubRows] = useState(null);
@@ -131,6 +132,16 @@ export default function App() {
         {/* Tabs */}
         <div className="flex gap-0 bg-white rounded-lg border border-slate-200 p-1">
           <button
+            onClick={() => setTab('tasks')}
+            className={`flex-1 py-1.5 rounded-md text-[13px] font-semibold transition-all ${
+              tab === 'tasks'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Jira Tasks
+          </button>
+          <button
             onClick={() => setTab('github')}
             className={`flex-1 py-1.5 rounded-md text-[13px] font-semibold transition-all ${
               tab === 'github'
@@ -152,17 +163,22 @@ export default function App() {
           </button>
         </div>
 
-        {/* Date + Save — shared across both tabs */}
-        <div className="bg-white rounded-lg border border-slate-200 p-3.5">
-          <DatePicker
-            value={date}
-            onChange={setDate}
-            cacheInfo={cacheInfo}
-            hasContent={hasContent}
-            saveFlash={saveFlash}
-            onSave={handleSave}
-          />
-        </div>
+        {/* Date + Save — shown only for GitHub Sync and Daily Report tabs */}
+        {tab !== 'tasks' && (
+          <div className="bg-white rounded-lg border border-slate-200 p-3.5">
+            <DatePicker
+              value={date}
+              onChange={setDate}
+              cacheInfo={cacheInfo}
+              hasContent={hasContent}
+              saveFlash={saveFlash}
+              onSave={handleSave}
+            />
+          </div>
+        )}
+
+        {/* ── Jira Tasks tab ── */}
+        {tab === 'tasks' && <JiraTrackerPanel />}
 
         {/* ── Report tab ── */}
         {tab === 'report' && (

@@ -36,6 +36,32 @@ export class JiraService {
     return res.json();
   }
 
+  /**
+   * Fetch a Jira version (release) by numeric id.
+   * Returns null if not found.
+   */
+  static async getVersion(domain, id) {
+    try {
+      return await this.fetchJira(domain, `/rest/api/3/version/${id}`);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Fetch a Jira issue by key. Returns null if not found.
+   * Optionally restrict to a specific issue type (e.g. 'Epic').
+   */
+  static async getIssue(domain, key, requiredType = null) {
+    try {
+      const issue = await this.fetchJira(domain, `/rest/api/3/issue/${key}?fields=summary,issuetype,status`);
+      if (requiredType && issue.fields?.issuetype?.name !== requiredType) return null;
+      return issue;
+    } catch {
+      return null;
+    }
+  }
+
   static async getMyProfile(domain) {
     const user = await this.fetchJira(domain, '/rest/api/3/myself');
     return {

@@ -171,6 +171,29 @@ export class StorageService {
     await chrome.storage.local.set({ githubToken, githubUsername, allowedRepos });
   }
 
+  static async getTrackers() {
+    const result = await chrome.storage.sync.get('jiraTrackers');
+    return result.jiraTrackers || [];
+  }
+
+  static async saveTrackers(trackers) {
+    await chrome.storage.sync.set({ jiraTrackers: trackers });
+  }
+
+  static async getTrackerOptions() {
+    const result = await chrome.storage.sync.get('jiraTrackerOptions');
+    return {
+      allAssignees: false,
+      hideQaSuccess: true,
+      ...(result.jiraTrackerOptions || {}),
+    };
+  }
+
+  static async saveTrackerOptions(options) {
+    const current = await this.getTrackerOptions();
+    await chrome.storage.sync.set({ jiraTrackerOptions: { ...current, ...options } });
+  }
+
   static async getDailyCache(date) {
     const result = await chrome.storage.local.get('dailyCache');
     const cache = result.dailyCache || {};

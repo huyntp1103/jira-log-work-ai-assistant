@@ -35,6 +35,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'JIRA_TRACKER_DETECT') {
+    handleJiraTrackerDetect(message)
+      .then((result) => sendResponse({ type: 'JIRA_TRACKER_DETECTED', ...result }))
+      .catch((error) => sendResponse({ type: 'JIRA_TRACKER_ERROR', error: error.message }));
+    return true;
+  }
+
+  if (message.type === 'JIRA_TRACKER_TASKS') {
+    handleJiraTrackerTasks(message)
+      .then((result) => sendResponse({ type: 'JIRA_TRACKER_TASKS_DATA', ...result }))
+      .catch((error) => sendResponse({ type: 'JIRA_TRACKER_ERROR', error: error.message }));
+    return true;
+  }
+
   if (message.type === 'JIRA_WORKLOG_UPDATE') {
     handleJiraWorklogUpdate(message)
       .then(() => sendResponse({ type: 'JIRA_WORKLOG_UPDATED' }))
@@ -115,6 +129,94 @@ export async function handleGenerateReport({ date, templateId }) {
   console.log('[BG] Gemini response received, length:', formattedText.length);
 
   return { report, formattedText };
+}
+
+const DEFAULT_PROJECT_KEY = 'UP';
+
+/**
+ * Detect whether a user-entered identifier refers to a Jira release (version)
+ * or an Epic issue. Accepts:
+ *   - a bare numeric id ("27643") — tries /version/{id} and /issue/UP-{id}
+ *   - a full issue key ("UP-68179") — verified as an Epic via /issue/{key}
+ */
+export async function handleJiraTrackerDetect({ input }) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first so the extension can detect your domain.');
+
+  const raw = String(input || '').trim().toUpperCase();
+  if (!raw) throw new Error('Please enter a release number or epic key.');
+
+  // Full issue key form
+  if (/^[A-Z]+-\d+$/.test(raw)) {
+    const issue = await JiraService.getIssue(domain, raw, 'Epic');
+    if (!issue) throw new Error(`${raw} is not an Epic (or you don't have access).`);
+    return {
+      tracker: {
+        id: raw,
+        type: 'epic',
+        label: issue.fields.summary,
+      },
+    };
+  }
+
+  // Bare numeric form — try version and issue in parallel
+  if (/^\d+$/.test(raw)) {
+    const epicKey = `${DEFAULT_PROJECT_KEY}-${raw}`;
+    const [version, issue] = await Promise.all([
+      JiraService.getVersion(domain, raw),
+      JiraService.getIssue(domain, epicKey, 'Epic'),
+    ]);
+    if (issue) {
+      return {
+        tracker: {
+          id: epicKey,
+          type: 'epic',
+          label: issue.fields.summary,
+        },
+      };
+    }
+    if (version) {
+      return {
+        tracker: {
+          id: raw,
+          type: 'version',
+          label: version.name || `Release ${raw}`,
+        },
+      };
+    }
+    throw new Error(`Could not find a release or epic for "${raw}".`);
+  }
+
+  throw new Error(`"${raw}" is not a valid id. Use a number (e.g. 27643) or a key (e.g. UP-68179).`);
+}
+
+/**
+ * Fetch the current user's tasks under a tracker.
+ * Returns rows with key, summary, status, sp, progress (%, integer).
+ */
+export async function handleJiraTrackerTasks({ tracker, allAssignees = false }) {
+  const settings = await StorageService.getSettings();
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first.');
+
+  const assigneeClause = allAssignees ? '' : 'assignee = currentUser() AND ';
+  const scope = tracker.type === 'version' ? `fixVersion = ${tracker.id}` : `parent = ${tracker.id}`;
+  const jql = `${assigneeClause}${scope} ORDER BY status, key`;
+
+  const data = await JiraService.searchJql(
+    domain,
+    jql,
+    ['summary', 'status', settings.spField]
+  );
+
+  const rows = (data.issues || []).map((issue) => ({
+    key: issue.key,
+    summary: issue.fields.summary || '',
+    status: issue.fields.status?.name || '',
+    sp: issue.fields[settings.spField] || 0,
+  }));
+
+  return { rows, domain };
 }
 
 export async function handleJiraWorklogUpdate({ issueKey, worklogId, timeSpentSeconds, comment }) {
