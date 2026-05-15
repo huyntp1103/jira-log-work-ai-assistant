@@ -98,7 +98,7 @@ export default function App() {
   if (view === 'settings') {
     return (
       <div className="w-full min-h-screen bg-slate-50">
-        <div className="bg-gradient-to-r from-violet-600 to-blue-500 px-5 py-3.5">
+        <div className="bg-slate-900 px-5 py-3.5">
           <h1 className="text-white text-sm font-semibold">Settings</h1>
         </div>
         <div className="p-4 max-w-[520px] mx-auto">
@@ -111,14 +111,14 @@ export default function App() {
   return (
     <div className="w-full min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-violet-600 to-blue-500 px-5 py-3.5 flex items-center justify-between">
+      <div className="bg-slate-900 px-5 py-3.5 flex items-center justify-between">
         <div>
           <h1 className="text-white text-sm font-semibold">Daily Report AI Assistant</h1>
           {/* <p className="text-blue-100 text-[11px] mt-0.5">AI-powered daily reports</p> */}
         </div>
         <button
           onClick={() => setView('settings')}
-          className="p-1.5 rounded text-blue-200 hover:text-white hover:bg-white/15 transition-colors"
+          className="p-1.5 rounded text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
           aria-label="Settings"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -135,7 +135,7 @@ export default function App() {
             onClick={() => setTab('tasks')}
             className={`flex-1 py-1.5 rounded-md text-[13px] font-semibold transition-all ${
               tab === 'tasks'
-                ? 'bg-emerald-600 text-white shadow-sm'
+                ? 'bg-teal-600 text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -145,7 +145,7 @@ export default function App() {
             onClick={() => setTab('github')}
             className={`flex-1 py-1.5 rounded-md text-[13px] font-semibold transition-all ${
               tab === 'github'
-                ? 'bg-violet-600 text-white shadow-sm'
+                ? 'bg-orange-500 text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -155,7 +155,7 @@ export default function App() {
             onClick={() => setTab('report')}
             className={`flex-1 py-1.5 rounded-md text-[13px] font-semibold transition-all ${
               tab === 'report'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -191,12 +191,12 @@ export default function App() {
             />
 
             {reportFromCache ? (
-              <CacheBanner savedAt={cacheInfo?.savedAt} onRefresh={handleRefreshReport} color="blue" />
+              <CacheBanner savedAt={cacheInfo?.savedAt} onRefresh={handleRefreshReport} color="indigo" />
             ) : (
               <button
                 onClick={() => { setWorklogExpanded(false); generate(date); }}
                 disabled={loading}
-                className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -227,11 +227,11 @@ export default function App() {
         {tab === 'github' && (
           <div className="space-y-3">
             {githubFromCache ? (
-              <CacheBanner savedAt={cacheInfo?.savedAt} onRefresh={handleRefreshGithub} color="violet" />
+              <CacheBanner savedAt={cacheInfo?.savedAt} onRefresh={handleRefreshGithub} color="orange" />
             ) : (
               <button
                 onClick={() => { setGithubRows(null); setGithubFetchKey((k) => k + 1); }}
-                className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-violet-600 hover:bg-violet-700 active:scale-[0.98] transition-all"
+                className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white bg-orange-500 hover:bg-orange-600 active:scale-[0.98] transition-all"
               >
                 Fetch GitHub Activity
               </button>
@@ -257,13 +257,13 @@ export default function App() {
 function CacheBanner({ savedAt, onRefresh, color = 'amber' }) {
   const styles = {
     amber: 'bg-amber-50 border-amber-200 text-amber-700',
-    violet: 'bg-violet-50 border-violet-200 text-violet-700',
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
+    orange: 'bg-orange-50 border-orange-200 text-orange-700',
+    indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700',
   };
   const btnStyles = {
     amber: 'text-amber-600 hover:text-amber-800',
-    violet: 'text-violet-600 hover:text-violet-800',
-    blue: 'text-blue-600 hover:text-blue-800',
+    orange: 'text-orange-600 hover:text-orange-800',
+    indigo: 'text-indigo-600 hover:text-indigo-800',
   };
   return (
     <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-[12px] ${styles[color]}`}>

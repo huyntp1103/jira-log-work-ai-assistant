@@ -15,7 +15,7 @@ export default function DatePicker({ value, onChange, cacheInfo, hasContent, sav
           value={value || today}
           max={today}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="flex-1 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         />
         {/* Cache badge — shown when cache exists for this date */}
         {cacheInfo && (
@@ -34,8 +34,8 @@ export default function DatePicker({ value, onChange, cacheInfo, hasContent, sav
             title="Save result for this date"
             className={`px-2.5 py-1.5 rounded border text-[12px] font-semibold transition-all active:scale-[0.97] ${
               saveFlash
-                ? 'bg-green-50 border-green-300 text-green-600'
-                : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600'
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-600'
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600'
             }`}
           >
             {saveFlash ? 'Saved ✓' : 'Save'}

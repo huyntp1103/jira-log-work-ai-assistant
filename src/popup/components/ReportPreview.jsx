@@ -21,12 +21,12 @@ export default function ReportPreview({ text, onChange, fromCache }) {
         value={text}
         onChange={(e) => onChange(e.target.value)}
         rows={14}
-        className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-700 text-[12px] leading-relaxed font-mono resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-700 text-[12px] leading-relaxed font-mono resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
       />
       <button
         onClick={handleCopy}
         className={`w-full py-2.5 rounded-lg text-[13px] font-semibold text-white active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 ${
-          copied ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'
+          copied ? 'bg-emerald-600' : 'bg-indigo-600 hover:bg-indigo-700'
         }`}
       >
         {copied ? 'Copied!' : 'Copy to Clipboard'}

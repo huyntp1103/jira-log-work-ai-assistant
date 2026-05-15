@@ -69,11 +69,11 @@ export default function Settings({ onBack }) {
           </label>
           {apiStatus && (
             <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${
-              apiStatus === 'ok' ? 'text-green-600' : apiStatus === 'error' ? 'text-red-600' : 'text-slate-500'
+              apiStatus === 'ok' ? 'text-emerald-600' : apiStatus === 'error' ? 'text-red-600' : 'text-slate-500'
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${
                 apiStatus === 'checking' ? 'bg-yellow-400 animate-pulse' :
-                apiStatus === 'ok' ? 'bg-green-500' : 'bg-red-500'
+                apiStatus === 'ok' ? 'bg-emerald-500' : 'bg-red-500'
               }`} />
               {apiStatus === 'checking' ? 'Checking...' : apiStatus === 'ok' ? 'Connected' : apiError}
             </span>
@@ -86,7 +86,7 @@ export default function Settings({ onBack }) {
             value={settings.geminiKey}
             onChange={(e) => setSettings({ ...settings, geminiKey: e.target.value })}
             placeholder="AIza..."
-            className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
           <button
             onClick={() => setShowKey(!showKey)}
@@ -109,7 +109,7 @@ export default function Settings({ onBack }) {
             type="text"
             value={settings.spField}
             onChange={(e) => setSettings({ ...settings, spField: e.target.value })}
-            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
         <div>
@@ -122,7 +122,7 @@ export default function Settings({ onBack }) {
             min="1"
             value={settings.hoursPerPoint}
             onChange={(e) => setSettings({ ...settings, hoursPerPoint: Number(e.target.value) })}
-            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
       </div>
@@ -140,7 +140,7 @@ export default function Settings({ onBack }) {
             value={github.githubUsername}
             onChange={(e) => setGithub({ ...github, githubUsername: e.target.value })}
             placeholder="your-github-username"
-            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
         <div>
@@ -154,7 +154,7 @@ export default function Settings({ onBack }) {
               value={github.githubToken}
               onChange={(e) => setGithub({ ...github, githubToken: e.target.value })}
               placeholder="ghp_..."
-              className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
             <button
               onClick={() => setShowPat(!showPat)}
@@ -174,7 +174,7 @@ export default function Settings({ onBack }) {
             value={github.allowedRepos}
             onChange={(e) => setGithub({ ...github, allowedRepos: e.target.value })}
             placeholder="Org/repo-1, Org/repo-2"
-            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
         <div>
@@ -192,7 +192,7 @@ export default function Settings({ onBack }) {
                   min="1"
                   value={Math.round(settings[key] / 60)}
                   onChange={(e) => setSettings({ ...settings, [key]: Number(e.target.value) * 60 })}
-                  className="w-full px-2 py-1.5 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
             ))}
@@ -211,7 +211,7 @@ export default function Settings({ onBack }) {
         <button
           onClick={handleSave}
           className={`flex-[2] py-2.5 rounded-lg text-[13px] font-semibold text-white active:scale-[0.98] transition-all ${
-            saved ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'
+            saved ? 'bg-emerald-600' : 'bg-indigo-600 hover:bg-indigo-700'
           }`}
         >
           {saved ? 'Saved!' : 'Save Settings'}

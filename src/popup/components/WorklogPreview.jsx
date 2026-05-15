@@ -229,7 +229,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
                       href={`https://${domain}/browse/${r.key}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline font-medium"
+                      className="text-indigo-600 hover:underline font-medium"
                     >
                       {r.key}
                     </a>
@@ -241,14 +241,14 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
                       value={r.timeStr}
                       onChange={(e) => updateRowById(r.id, { timeStr: e.target.value, saveStatus: null })}
                       placeholder="1h 30m"
-                      className="w-14 px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-center font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-14 px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-center font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                     <button
                       onClick={() => handleSave(r)}
                       disabled={!dirty || saving}
                       className={`p-1 transition-colors ${
                         dirty && !saving
-                          ? 'text-blue-500 hover:text-blue-700'
+                          ? 'text-indigo-500 hover:text-indigo-700'
                           : 'text-slate-300 cursor-not-allowed'
                       }`}
                       aria-label="Save changes"
@@ -277,7 +277,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
                   onChange={(e) => updateRowById(r.id, { commentDraft: e.target.value, saveStatus: null })}
                   placeholder="Description (optional)"
                   rows={2}
-                  className="w-full px-2 py-1.5 rounded border border-slate-200 bg-slate-50 text-[12px] text-slate-600 leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                  className="w-full px-2 py-1.5 rounded border border-slate-200 bg-slate-50 text-[12px] text-slate-600 leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white"
                 />
 
                 {r.saveStatus === 'error' && (
@@ -293,7 +293,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
         <button
           type="button"
           onClick={openAddForm}
-          className="w-full mt-1 py-1.5 rounded border border-dashed border-slate-300 text-[12px] font-medium text-slate-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
+          className="w-full mt-1 py-1.5 rounded border border-dashed border-slate-300 text-[12px] font-medium text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1.5"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
             <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
@@ -325,7 +325,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
               <select
                 value={newKey}
                 onChange={(e) => { setNewKey(e.target.value); setCreateError(''); }}
-                className="w-full px-2 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-2 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">— Select a ticket —</option>
                 {(recentTickets || []).map((t) => (
@@ -344,7 +344,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
               value={newTime}
               onChange={(e) => { setNewTime(e.target.value); setCreateError(''); }}
               placeholder="1h 30m"
-              className="w-20 px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-center font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-20 px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-center font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
@@ -353,7 +353,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
             onChange={(e) => { setNewDescription(e.target.value); setCreateError(''); }}
             placeholder="Description (optional)"
             rows={2}
-            className="w-full px-2 py-1.5 rounded border border-slate-200 bg-white text-[12px] text-slate-600 leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full px-2 py-1.5 rounded border border-slate-200 bg-white text-[12px] text-slate-600 leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
 
           {createError && (
@@ -364,7 +364,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
             type="button"
             onClick={handleCreate}
             disabled={creating || !newKey || !newTime.trim()}
-            className="w-full py-1.5 rounded text-[12px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+            className="w-full py-1.5 rounded text-[12px] font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
           >
             {creating ? (
               <>

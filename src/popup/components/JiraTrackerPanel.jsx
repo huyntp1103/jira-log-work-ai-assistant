@@ -105,12 +105,12 @@ export default function JiraTrackerPanel() {
             onChange={(e) => { setInput(e.target.value); setError(''); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
             placeholder="27643, UP-68179, or board URL"
-            className="w-40 px-2 py-1 rounded border border-slate-200 bg-slate-50 text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
+            className="w-40 px-2 py-1 rounded border border-slate-200 bg-slate-50 text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:bg-white"
           />
           <button
             onClick={handleAdd}
             disabled={adding || !input.trim()}
-            className="px-2.5 py-1 rounded text-[12px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+            className="px-2.5 py-1 rounded text-[12px] font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
           >
             {adding ? 'Detecting…' : 'Add'}
           </button>
@@ -216,7 +216,7 @@ function Toggle({ label, checked, onChange }) {
         aria-checked={checked}
         onClick={onChange}
         className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-          checked ? 'bg-blue-600' : 'bg-slate-300'
+          checked ? 'bg-teal-600' : 'bg-slate-300'
         }`}
       >
         <span
@@ -302,7 +302,7 @@ function TrackerRow({
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={`bg-white rounded-lg border transition-all ${
-        isDragOver ? 'border-blue-400 ring-2 ring-blue-200' : 'border-slate-200'
+        isDragOver ? 'border-teal-400 ring-2 ring-teal-200' : 'border-slate-200'
       } ${isDragging ? 'opacity-40' : ''}`}
     >
       <div className="flex items-center gap-2 p-3">
@@ -354,7 +354,7 @@ function TrackerRow({
           href={trackerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-1 text-slate-300 hover:text-blue-600 transition-colors"
+          className="p-1 text-slate-300 hover:text-teal-600 transition-colors"
           aria-label="Open in Jira"
           title="Open in Jira"
         >
@@ -419,7 +419,7 @@ function TrackerRow({
                               href={`https://${domain}/browse/${r.key}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline font-medium"
+                              className="text-indigo-600 hover:underline font-medium"
                             >
                               {r.key}
                             </a>

@@ -82,22 +82,38 @@ Three-tab layout with shared header controls:
 
 ### Color palette
 
-Uses standard Tailwind colors matching the brand gradient:
+Per-tab accent scheme. Each tab owns a color; its primary CTAs use the same color so you always know what context an action lives in.
 
-- **Header:** `bg-gradient-to-r from-violet-600 to-blue-500`
-- **Tab accents:** Jira Tasks `emerald-600`, GitHub Sync `violet-600`, Daily Report `blue-600`
-- **Generate Report button:** `bg-blue-600` (primary CTA on Daily Report tab)
-- **Sync to Jira button:** `bg-violet-600` (primary CTA on GitHub Sync tab)
-- **Copy to Clipboard button:** `bg-blue-600`
-- **Save button:** `bg-blue-600`
-- **Success state:** `bg-emerald-600` / `text-emerald-600` (Saved!, Copied!, Saved ✓)
-- **Focus rings:** `ring-blue-500`
+- **Header:** `bg-slate-900` (solid, no gradient). Settings icon: `text-slate-300 hover:text-white`.
+- **Tab accents (active):**
+  - Jira Tasks → `bg-teal-600 text-white`
+  - GitHub Sync → `bg-orange-500 text-white`
+  - Daily Report → `bg-indigo-600 text-white`
+- **Inactive tab:** `text-slate-500 hover:text-slate-700`.
+- **Primary CTAs (per tab):**
+  - Jira Tasks tab — Add tracker: `bg-teal-600 hover:bg-teal-700`
+  - GitHub Sync tab — Fetch / Sync to Jira: `bg-orange-500 hover:bg-orange-600`
+  - Daily Report tab — Generate Report / Copy to Clipboard / Create worklog: `bg-indigo-600 hover:bg-indigo-700`
+  - Shared (DatePicker Save, Settings Save, Template Save, ErrorBoundary): `bg-indigo-600 hover:bg-indigo-700`
+- **Success state:** `bg-emerald-600` (Saved!, Copied!) / `bg-emerald-50 border-emerald-300 text-emerald-600` (Save flash, GitHub sync done banner)
+- **Error:** `bg-red-50 text-red-700 border-red-200` (or `bg-rose-50` if a softer red is preferred — currently using red)
+- **Cache banner colors** (per tab context):
+  - Jira Tasks tab: n/a (no cache banner)
+  - GitHub Sync tab → `orange` (`bg-orange-50 border-orange-200 text-orange-700`)
+  - Daily Report tab → `indigo` (`bg-indigo-50 border-indigo-200 text-indigo-700`)
+  - Save flash banner → `amber` (unchanged)
+- **Focus rings:**
+  - Inside Jira Tasks tab → `ring-teal-500`
+  - Inside GitHub Sync tab → `ring-orange-500`
+  - Inside Daily Report tab (incl. Settings, DatePicker, Templates) → `ring-indigo-500`
+- **Ticket key links:** `text-indigo-600 hover:underline` (universal across tabs — close to the conventional "blue link" affordance while staying within the new palette).
 - **Background:** `bg-slate-50`
 - **Cards:** `bg-white border-slate-200`
 - **Inputs:** `bg-slate-50 border-slate-200`
 - **Primary text:** `text-slate-800`
 - **Secondary text:** `text-slate-500`
-- **Error:** `bg-red-50 text-red-700 border-red-200`
+- **Toggle switches** (Jira Tasks tab): on = `bg-teal-600`, off = `bg-slate-300`.
+- **Drag-and-drop highlight** (Jira Tasks tab): `border-teal-400 ring-2 ring-teal-200`.
 
 ### Status palette (Jira Tasks tab)
 

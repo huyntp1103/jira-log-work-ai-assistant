@@ -90,7 +90,7 @@ export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = n
 
       {/* Sync done */}
       {syncDone !== null && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-[13px] text-green-700">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-[13px] text-emerald-700">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
             <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
           </svg>
@@ -127,12 +127,12 @@ export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = n
                           href={`https://${jiraDomain}/browse/${row.key}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-mono font-semibold text-violet-700 hover:text-violet-900 hover:underline"
+                          className="font-mono font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
                         >
                           {row.key}
                         </a>
                       ) : (
-                        <span className="font-mono font-semibold text-violet-700">{row.key}</span>
+                        <span className="font-mono font-semibold text-indigo-600">{row.key}</span>
                       )}
                       {row.summary && (
                         <span className="text-slate-600">: {row.summary}</span>
@@ -145,7 +145,7 @@ export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = n
                       value={row.timeStr}
                       onChange={(e) => updateRow(i, 'timeStr', e.target.value)}
                       placeholder="1h 30m"
-                      className="w-14 px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-center font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                      className="w-14 px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-center font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-orange-500"
                     />
                     <button
                       onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
@@ -162,7 +162,7 @@ export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = n
                   value={row.description}
                   onChange={(e) => updateRow(i, 'description', e.target.value)}
                   rows={2}
-                  className="w-full px-2 py-1.5 rounded border border-slate-200 bg-slate-50 text-[12px] text-slate-600 leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-violet-500 focus:bg-white"
+                  className="w-full px-2 py-1.5 rounded border border-slate-200 bg-slate-50 text-[12px] text-slate-600 leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white"
                 />
               </div>
             ))}
@@ -174,7 +174,7 @@ export default function GitHubSyncPanel({ date, autoFetch = false, savedRows = n
               <button
                 onClick={handleSync}
                 disabled={syncing}
-                className="w-full py-2 rounded-lg text-[13px] font-semibold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                className="w-full py-2 rounded-lg text-[13px] font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 {syncing ? (
                   <>
