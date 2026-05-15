@@ -24,11 +24,15 @@ Three-tab layout with shared header controls:
 
 ### Jira Tasks tab (default)
 
-- **Track input row:** Compact `Track:` label + 160px input + Add button. Accepts a bare numeric id (e.g. `27643`) or a full key (e.g. `UP-68179`).
+- **Track input row:** Compact `Track:` label + 160px input + Add button. Accepts:
+  - Bare numeric id (e.g. `27643`) → release or epic (worker probes both).
+  - Full key (e.g. `UP-68179`) → epic.
+  - Board URL (e.g. `https://<domain>/jira/software/c/projects/UP/boards/26?...`) → board. The pasted URL is stored under `tracker.url` so the open-in-Jira link preserves your `assignee` / `issueType` filters.
 - **Global toggles** below a thin divider:
   - **All assignees** — default off. When on, the worker drops `assignee = currentUser()` from the JQL.
   - **Hide QA Success** — default on. Client-side filter (no re-fetch needed).
-- **Tracker list:** Each tracker is a collapsible card. Header shows: drag handle (6-dot grip), expand chevron, type badge (`EPIC` violet / `RELEASE` amber), label, `done/total` count, open-in-Jira link, delete button.
+- **Tracker list:** Each tracker is a collapsible card. Header shows: drag handle (6-dot grip), expand chevron, type badge (`EPIC` violet / `RELEASE` amber / `BOARD` cyan), label, `done/total` count, open-in-Jira link, delete button.
+- **Board scope:** an expanded board tracker shows tasks from the board's **active sprint** (resolved via `/rest/agile/1.0/board/{id}/sprint?state=active`). If no active sprint exists, an inline error is shown.
 - **Reordering:** Drag the grip to reorder. Dragged card fades to 40% opacity; drop target shows a blue ring. Order persists to `chrome.storage.sync`.
 - **Expanded tracker:** Tasks are grouped by status in this fixed order — **QA Failed → To Do → In Progress → In Review → QA Ready → In Test → QA Success → Other**. Each group has a colored pill header matching its status palette.
 - **Task row:** Single-line layout — Key + Title (2-line clamp before ellipsis) on the left, status pill, then SP on the right.
@@ -46,6 +50,7 @@ Three-tab layout with shared header controls:
   - Auto-loads the user's Jira worklogs for the picked date.
   - Each row shows: Key (link) + Title (2-line clamp), editable **time** input (e.g. `1h 30m`), editable **description** textarea.
   - **Per-row Save icon** next to the time input — only enabled when the row has unsaved changes. States: idle (slate floppy) → has-changes (blue floppy) → saving (spinner) → saved (green check, auto-clears after 1.5s) → error (inline red message).
+  - **Log new time** dashed button beneath the list expands an inline form: ticket dropdown (issues the user has worklogged in the last 7 days), time input, optional description, **Create worklog** button. On success the form closes and the list refreshes.
   - Auto-collapses when **Generate Report** is clicked.
 - **Generate Report button:** Triggers Gemini AI report generation.
 - **Editable textarea preview** of the AI output + **Copy to Clipboard** button (turns green on copy).

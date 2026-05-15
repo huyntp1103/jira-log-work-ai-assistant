@@ -104,7 +104,7 @@ export default function JiraTrackerPanel() {
             value={input}
             onChange={(e) => { setInput(e.target.value); setError(''); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
-            placeholder="27643 or UP-68179"
+            placeholder="27643, UP-68179, or board URL"
             className="w-40 px-2 py-1 rounded border border-slate-200 bg-slate-50 text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
           />
           <button
@@ -247,9 +247,16 @@ function TrackerRow({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const trackerUrl = tracker.type === 'epic'
-    ? `https://${domain}/browse/${tracker.id}`
-    : `https://${domain}/projects/UP/versions/${tracker.id}`;
+  let trackerUrl;
+  if (tracker.url) {
+    trackerUrl = tracker.url;
+  } else if (tracker.type === 'epic') {
+    trackerUrl = `https://${domain}/browse/${tracker.id}`;
+  } else if (tracker.type === 'board') {
+    trackerUrl = `https://${domain}/jira/software/c/projects/UP/boards/${tracker.id}`;
+  } else {
+    trackerUrl = `https://${domain}/projects/UP/versions/${tracker.id}`;
+  }
 
   const load = () => {
     setLoading(true);
@@ -326,9 +333,13 @@ function TrackerRow({
             <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
           </svg>
           <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${
-            tracker.type === 'epic' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'
+            tracker.type === 'epic'
+              ? 'bg-violet-100 text-violet-700'
+              : tracker.type === 'board'
+              ? 'bg-cyan-100 text-cyan-700'
+              : 'bg-amber-100 text-amber-700'
           }`}>
-            {tracker.type === 'epic' ? 'Epic' : 'Release'}
+            {tracker.type === 'epic' ? 'Epic' : tracker.type === 'board' ? 'Board' : 'Release'}
           </span>
           <span className="text-[12px] font-semibold text-slate-700 truncate flex-1">
             {tracker.label}

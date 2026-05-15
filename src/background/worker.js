@@ -157,8 +157,26 @@ export async function handleJiraTrackerDetect({ input }) {
   const domain = await StorageService.getJiraDomain();
   if (!domain) throw new Error('Please open a Jira tab first so the extension can detect your domain.');
 
-  const raw = String(input || '').trim().toUpperCase();
-  if (!raw) throw new Error('Please enter a release number or epic key.');
+  const original = String(input || '').trim();
+  if (!original) throw new Error('Please enter a release number, epic key, or board URL.');
+
+  // Board URL — e.g. https://<domain>/jira/software/c/projects/UP/boards/26?...
+  const boardMatch = original.match(/\/boards\/(\d+)/);
+  if (boardMatch) {
+    const boardId = boardMatch[1];
+    const board = await JiraService.getBoard(domain, boardId);
+    if (!board) throw new Error(`Could not find board ${boardId} (or you don't have access).`);
+    return {
+      tracker: {
+        id: boardId,
+        type: 'board',
+        label: board.name || `Board ${boardId}`,
+        url: original,
+      },
+    };
+  }
+
+  const raw = original.toUpperCase();
 
   // Full issue key form
   if (/^[A-Z]+-\d+$/.test(raw)) {
@@ -214,7 +232,16 @@ export async function handleJiraTrackerTasks({ tracker, allAssignees = false }) 
   if (!domain) throw new Error('Please open a Jira tab first.');
 
   const assigneeClause = allAssignees ? '' : 'assignee = currentUser() AND ';
-  const scope = tracker.type === 'version' ? `fixVersion = ${tracker.id}` : `parent = ${tracker.id}`;
+  let scope;
+  if (tracker.type === 'version') {
+    scope = `fixVersion = ${tracker.id}`;
+  } else if (tracker.type === 'board') {
+    const sprint = await JiraService.getActiveSprintForBoard(domain, tracker.id);
+    if (!sprint) throw new Error('This board has no active sprint right now.');
+    scope = `sprint = ${sprint.id}`;
+  } else {
+    scope = `parent = ${tracker.id}`;
+  }
   const jql = `${assigneeClause}${scope} ORDER BY status, key`;
 
   const data = await JiraService.searchJql(

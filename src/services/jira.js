@@ -49,6 +49,33 @@ export class JiraService {
   }
 
   /**
+   * Fetch an Agile board by id (`/rest/agile/1.0/board/{id}`). Returns null if not found.
+   */
+  static async getBoard(domain, id) {
+    try {
+      return await this.fetchJira(domain, `/rest/agile/1.0/board/${id}`);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Find the currently-active sprint for a board. Returns the first active sprint
+   * (most boards have at most one) or null if none.
+   */
+  static async getActiveSprintForBoard(domain, boardId) {
+    try {
+      const data = await this.fetchJira(
+        domain,
+        `/rest/agile/1.0/board/${boardId}/sprint?state=active`
+      );
+      return (data.values || [])[0] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Fetch a Jira issue by key. Returns null if not found.
    * Optionally restrict to a specific issue type (e.g. 'Epic').
    */
