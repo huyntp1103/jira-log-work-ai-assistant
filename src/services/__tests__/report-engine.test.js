@@ -118,7 +118,7 @@ describe('ReportEngine.generate', () => {
     const worklogs = [
       makeWorklog('user-123', '2026-04-08T10:00:00.000+0700', 7200),
     ];
-    const issue = makeIssue('UP-4', { worklogs, status: 'In Review', sp: 2 });
+    const issue = makeIssue('UP-4', { worklogs, status: 'QA FAILED', sp: 2 });
 
     JiraService.searchJql
       .mockResolvedValueOnce({ issues: [issue] })  // logged
@@ -306,9 +306,10 @@ describe('ReportEngine.generate', () => {
     // Check the plan query JQL (second call)
     const planJql = JiraService.searchJql.mock.calls[1][1];
     expect(planJql).toContain('status = "In Progress"');
-    expect(planJql).toContain('status in ("In Review", "QA FAILED")');
+    expect(planJql).toContain('status = "QA FAILED"');
+    expect(planJql).not.toContain('In Review');
     expect(planJql).toContain('created >=');
     // "In Progress" should be OR'd without created filter
-    expect(planJql).toMatch(/status = "In Progress" OR \(status in/);
+    expect(planJql).toMatch(/status = "In Progress" OR \(status = "QA FAILED"/);
   });
 });

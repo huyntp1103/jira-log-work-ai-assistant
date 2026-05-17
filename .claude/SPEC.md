@@ -114,11 +114,11 @@ JQL search returns up to **20 embedded worklogs per issue, oldest-first**. For i
 assignee = currentUser() AND sprint in openSprints()
 AND (
   status = "In Progress"
-  OR (status in ("In Review", "QA FAILED") AND created >= "-14d")
+  OR (status = "QA FAILED" AND created >= "-14d")
 )
 ```
 - `In Progress` issues are **always** in Plan for Today (even when logged today).
-- Other statuses (`In Review`, `QA FAILED`) are excluded if logged today (deduplication via `loggedIssueKeys`).
+- Other statuses (`QA FAILED`) are excluded if logged today (deduplication via `loggedIssueKeys`).
 
 ### E. Required fields on JQL search
 

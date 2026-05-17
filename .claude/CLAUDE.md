@@ -138,7 +138,7 @@ The `assignee` clause is dropped when the **All assignees** toggle is on.
 assignee = currentUser() AND sprint in openSprints()
 AND (
   status = "In Progress"
-  OR (status in ("In Review", "QA FAILED") AND created >= twoWeeksAgo)
+  OR (status = "QA FAILED" AND created >= twoWeeksAgo)
 )
 ```
 "In Progress" has no `created` filter; other statuses are capped at 14 days. `In Progress` tickets stay in Plan for Today even when logged today (other statuses are deduplicated).

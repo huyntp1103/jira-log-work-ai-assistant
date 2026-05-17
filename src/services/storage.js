@@ -142,7 +142,7 @@ If Progress < 100%, the Remaining field is Mandatory. Keep it SHORT (under 10 wo
 PROGRESS CHANGED: Output all tasks listed under "Progress Changed" in the JSON data.
 Reason must be SHORT (under 10 words). Pick the closest match from the Reason examples below, adapting slightly to the task title if needed.
 
-PLAN FOR TODAY: Use for tasks currently in "In Progress", "In Review", or "QA FAILED" status that were not completed yesterday.
+PLAN FOR TODAY: Use for tasks currently in "In Progress" or "QA FAILED" status that were not completed yesterday.
 CRITICAL: The "Progress" field in the JSON data is the EXACT current progress. You MUST use it as-is in "[X% by EOD]" — do NOT recalculate or override it. For example, if Progress is "50%", output "Progress: 50% by EOD".
 Full task done: Calculate remaining progress to 100%, convert to remaining SP, divide by 1.5 SP/day (skip weekends), and add to the Report Date. Always show a concrete date (e.g., "7 Apr 2026"), never leave placeholders.
 AI field: ALWAYS combine 2-3 items from the AI usage examples below, comma-separated. Example: "Write solution design & implementation plan, generate code, generate tests".
