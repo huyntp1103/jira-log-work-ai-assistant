@@ -10,6 +10,7 @@ export default function Settings({ onBack }) {
     timeCommit: 3600,
     timeApprove: 900,
     timeComment: 900,
+    reportEngine: 'gemini',
   });
   const [github, setGithub] = useState({ githubToken: '', githubUsername: '', allowedRepos: '' });
   const [showKey, setShowKey] = useState(false);
@@ -36,7 +37,7 @@ export default function Settings({ onBack }) {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
 
-    if (settings.geminiKey) {
+    if (settings.reportEngine !== 'local' && settings.geminiKey) {
       setApiStatus('checking');
       setApiError('');
       try {
@@ -59,6 +60,38 @@ export default function Settings({ onBack }) {
       <div className="bg-white rounded-lg border border-slate-200 p-3.5">
         <h3 className="text-[13px] font-semibold text-slate-800 mb-2.5">Templates</h3>
         <TemplateSelector selectedId={null} onSelect={() => {}} />
+      </div>
+
+      {/* Report Engine */}
+      <div className="bg-white rounded-lg border border-slate-200 p-3.5 space-y-2.5">
+        <div>
+          <h3 className="text-[13px] font-semibold text-slate-800">Report Engine</h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Choose how the daily report is generated.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-lg">
+          {[
+            { value: 'gemini', label: 'Gemini AI' },
+            { value: 'local', label: 'Local Formatter' },
+          ].map(({ value, label }) => {
+            const active = (settings.reportEngine || 'gemini') === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setSettings({ ...settings, reportEngine: value })}
+                className={`py-1.5 rounded-md text-[12px] font-medium transition-all ${
+                  active
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* API Key */}

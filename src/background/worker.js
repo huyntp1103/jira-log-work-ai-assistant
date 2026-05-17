@@ -6,13 +6,6 @@ import { ReportEngine } from '../services/report-engine.js';
 import { GitHubService } from '../services/github.js';
 import { DateHelper } from '../utils/date.js';
 
-// Build-time switch. Set VITE_REPORT_ENGINE=local in .env to skip Gemini and
-// render reports deterministically via LocalFormatter; otherwise defaults to Gemini.
-// Read per-call (not at module load) so tests can stub it with vi.stubEnv.
-function getReportEngine() {
-  return (import.meta.env?.VITE_REPORT_ENGINE || 'gemini').toLowerCase();
-}
-
 console.log('[BG] Service worker started');
 
 // Open side panel when the toolbar icon is clicked
@@ -108,7 +101,7 @@ export async function handleGenerateReport({ date, templateId }) {
   console.log('[BG] Config:', { domain, hasKey: !!settings.geminiKey, templateId });
 
   if (!domain) throw new Error('Please open a Jira tab first so the extension can detect your domain.');
-  const reportEngine = getReportEngine();
+  const reportEngine = (settings.reportEngine || 'gemini').toLowerCase();
   if (reportEngine === 'gemini' && !settings.geminiKey) {
     throw new Error('Please enter your Gemini API key in Settings.');
   }
@@ -140,7 +133,7 @@ export async function handleGenerateReport({ date, templateId }) {
   console.log('[BG] Report data:', JSON.stringify(report).substring(0, 200));
 
   // Step 3: Format — either Gemini AI or the deterministic LocalFormatter,
-  // depending on VITE_REPORT_ENGINE.
+  // depending on settings.reportEngine.
   const platform = template.name.split(/\s/)[0];
   const reportDate = DateHelper.getReportDate(targetDate);
   let formattedText;

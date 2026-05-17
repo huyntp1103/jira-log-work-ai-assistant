@@ -5,6 +5,7 @@ const DEFAULT_SETTINGS = {
   timeCommit: 3600,
   timeApprove: 900,
   timeComment: 900,
+  reportEngine: 'gemini',
 };
 
 export const DEFAULT_FORMAT = `DAILY REPORT — [Use the Report Date provided by the user, formatted as "D Mon YYYY"]

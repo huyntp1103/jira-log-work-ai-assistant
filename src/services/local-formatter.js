@@ -147,7 +147,6 @@ export class LocalFormatter {
       `DAILY REPORT — ${formatHumanDate(targetDate)}`,
       `Name: ${displayName || 'Unknown'}`,
       `Platform: ${platform || 'Unknown'}`,
-      '',
       '——————————————————',
     ].join('\n');
 
@@ -159,6 +158,6 @@ export class LocalFormatter {
 
     const footer = ['Blocker: None', 'At-risk: None', 'Question: None'].join('\n');
 
-    return [header, sections.join('\n\n'), footer].filter(Boolean).join('\n\n');
+    return [`${header}\n${sections.join('\n\n')}`, footer].join('\n\n');
   }
 }

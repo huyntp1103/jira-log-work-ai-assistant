@@ -50,15 +50,12 @@ import { GeminiService } from '../../services/gemini.js';
 import { ReportEngine } from '../../services/report-engine.js';
 import { GitHubService } from '../../services/github.js';
 
-const SETTINGS = { geminiKey: 'key', spField: 'story_points', hoursPerPoint: 4, timeCommit: 1800, timeApprove: 900, timeComment: 300 };
+const SETTINGS = { geminiKey: 'key', spField: 'story_points', hoursPerPoint: 4, timeCommit: 1800, timeApprove: 900, timeComment: 300, reportEngine: 'gemini' };
 const TEMPLATES = [{ id: 'tpl1', name: 'Slack', format: 'slack format', isDefault: true }];
 const PROFILE = { accountId: 'user-1', displayName: 'Huy' };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Pin the report engine to gemini for all tests so they don't depend on the
-  // developer's local .env. Individual tests can override with vi.stubEnv.
-  vi.stubEnv('VITE_REPORT_ENGINE', 'gemini');
   StorageService.getSettings.mockResolvedValue(SETTINGS);
   StorageService.getTemplates.mockResolvedValue(TEMPLATES);
   StorageService.getJiraDomain.mockResolvedValue('myorg.atlassian.net');
@@ -70,9 +67,6 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
-  vi.unstubAllEnvs();
-});
 
 // ─── handleGenerateReport ─────────────────────────────────────────────────────
 
@@ -181,10 +175,9 @@ describe('handleGitHubSyncPreview — date used as-is (same behavior as Generate
 
 // ─── handleGenerateReport — engine switch ─────────────────────────────────────
 
-describe('handleGenerateReport — VITE_REPORT_ENGINE switch', () => {
+describe('handleGenerateReport — reportEngine setting switch', () => {
   it('local mode skips Gemini, does not require an API key, and uses LocalFormatter output', async () => {
-    vi.stubEnv('VITE_REPORT_ENGINE', 'local');
-    StorageService.getSettings.mockResolvedValue({ ...SETTINGS, geminiKey: '' });
+    StorageService.getSettings.mockResolvedValue({ ...SETTINGS, geminiKey: '', reportEngine: 'local' });
 
     const result = await handleGenerateReport({ date: '2026-05-18', templateId: 'tpl1' });
 
@@ -194,8 +187,7 @@ describe('handleGenerateReport — VITE_REPORT_ENGINE switch', () => {
   });
 
   it('gemini mode still throws when no API key is configured', async () => {
-    vi.stubEnv('VITE_REPORT_ENGINE', 'gemini');
-    StorageService.getSettings.mockResolvedValue({ ...SETTINGS, geminiKey: '' });
+    StorageService.getSettings.mockResolvedValue({ ...SETTINGS, geminiKey: '', reportEngine: 'gemini' });
 
     await expect(handleGenerateReport({ date: '2026-04-08' }))
       .rejects.toThrow('Please enter your Gemini API key');
