@@ -70,10 +70,44 @@ Reason examples: "Documented detailed requirements for payment integration featu
 AI usage examples: "Write user stories for new feature module", "Generate acceptance criteria from business requirements", "Review process flow for completeness and edge cases", "Create stakeholder presentation summarizing sprint deliverables".`,
 };
 
-const DEFAULT_PLATFORM_HINT = `Use professional technical terminology appropriate for a software developer.
-Remaining examples: "Wait for QA testing", "Resolve review comments", "Deploy and verify on staging".
-Reason examples: "Implement logic based on solution design & implementation plan", "Fixed reported bugs", "Optimized performance".
-AI usage examples: "Write solution design & implementation plan", "Generate code", "Generate tests", "Scan current code to understand business logic".`;
+const DEFAULT_PLATFORM_HINT = `Use technical terminology appropriate for a Senior Backend Developer (API design, database, microservices, performance, system architecture).
+Remaining examples: "Wait for QA testing", "Resolve code review comments", "Deploy to staging and verify", "Update API documentation".
+Reason examples: "Implement logic based on solution design & implementation plan", "Optimized database queries to reduce latency", "Fixed N+1 query issue in worklog aggregation", "Refactored authentication middleware for token refresh", "Resolved staging deployment configuration bugs".
+AI usage examples: "Write solution design & implementation plan", "Generate code", "Generate tests", "Review code for edge cases and error handling", "Scan current code to understand business logic".`;
+
+/**
+ * Default "AI usage" line that LocalFormatter (and any non-AI renderer) writes
+ * to each Plan-for-Today row.
+ *
+ * Each platform maps to an object keyed by Jira issue type, with a mandatory
+ * `default` fallback. Backend has explicit Bug / Task variants so the report
+ * line reflects how AI is actually used for each kind of work; the other
+ * platforms can be split the same way later as they adopt the extension.
+ */
+export const PLATFORM_AI_USAGE = {
+  Backend: {
+    Bug:  'Scan current code to understand business logic, investigate issue, write code to fix issue and fix data if necessary.',
+    Task: 'Write solution design & implementation plan, generate code, generate tests',
+    default: 'Write solution design & implementation plan, generate code, generate tests',
+  },
+  QA:      { default: 'Generate test cases for new API endpoints, write automation scripts for regression suite' },
+  Android: { default: 'Write Compose UI for new settings screen, generate unit tests for repository pattern' },
+  iOS:     { default: 'Write SwiftUI components for profile screen, generate XCTest cases for networking layer' },
+  Web:     { default: 'Write React components for new dashboard, generate Jest tests for utility functions' },
+  BA:      { default: 'Write user stories for new feature module, generate acceptance criteria from business requirements' },
+};
+
+export const DEFAULT_AI_USAGE = PLATFORM_AI_USAGE.Backend.default;
+
+/**
+ * Look up the AI-usage line for a given platform + issue type.
+ * Falls back through: platform[issueType] → platform.default → DEFAULT_AI_USAGE.
+ */
+export function getAiUsage(platform, issueType) {
+  const entry = PLATFORM_AI_USAGE[platform];
+  if (!entry) return DEFAULT_AI_USAGE;
+  return entry[issueType] || entry.default || DEFAULT_AI_USAGE;
+}
 
 /**
  * Wrap a user's desired format into a full Gemini instruction.

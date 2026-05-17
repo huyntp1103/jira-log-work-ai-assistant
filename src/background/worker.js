@@ -1,9 +1,17 @@
 import { StorageService, buildInstruction } from '../services/storage.js';
 import { JiraService } from '../services/jira.js';
 import { GeminiService } from '../services/gemini.js';
+import { LocalFormatter } from '../services/local-formatter.js';
 import { ReportEngine } from '../services/report-engine.js';
 import { GitHubService } from '../services/github.js';
 import { DateHelper } from '../utils/date.js';
+
+// Build-time switch. Set VITE_REPORT_ENGINE=local in .env to skip Gemini and
+// render reports deterministically via LocalFormatter; otherwise defaults to Gemini.
+// Read per-call (not at module load) so tests can stub it with vi.stubEnv.
+function getReportEngine() {
+  return (import.meta.env?.VITE_REPORT_ENGINE || 'gemini').toLowerCase();
+}
 
 console.log('[BG] Service worker started');
 
@@ -100,7 +108,10 @@ export async function handleGenerateReport({ date, templateId }) {
   console.log('[BG] Config:', { domain, hasKey: !!settings.geminiKey, templateId });
 
   if (!domain) throw new Error('Please open a Jira tab first so the extension can detect your domain.');
-  if (!settings.geminiKey) throw new Error('Please enter your Gemini API key in Settings.');
+  const reportEngine = getReportEngine();
+  if (reportEngine === 'gemini' && !settings.geminiKey) {
+    throw new Error('Please enter your Gemini API key in Settings.');
+  }
 
   const template = templates.find((t) => t.id === templateId)
     || templates.find((t) => t.isDefault)
@@ -128,19 +139,28 @@ export async function handleGenerateReport({ date, templateId }) {
   const report = await engine.generate();
   console.log('[BG] Report data:', JSON.stringify(report).substring(0, 200));
 
-  // Step 3: Format with Gemini AI
-  console.log('[BG] Step 3: Sending to Gemini...');
-  const formattedText = await GeminiService.generateReport(
-    report,
-    settings.geminiKey,
-    buildInstruction(template.format, template.name.split(/\s/)[0]),
-    {
+  // Step 3: Format — either Gemini AI or the deterministic LocalFormatter,
+  // depending on VITE_REPORT_ENGINE.
+  const platform = template.name.split(/\s/)[0];
+  const reportDate = DateHelper.getReportDate(targetDate);
+  let formattedText;
+  if (reportEngine === 'local') {
+    console.log('[BG] Step 3: Formatting locally (no Gemini call)...');
+    formattedText = LocalFormatter.formatReport(report, {
       displayName: profile.displayName,
-      platform: template.name.split(/\s/)[0],
-      targetDate: DateHelper.getReportDate(targetDate),
-    }
-  );
-  console.log('[BG] Gemini response received, length:', formattedText.length);
+      platform,
+      targetDate: reportDate,
+    });
+  } else {
+    console.log('[BG] Step 3: Sending to Gemini...');
+    formattedText = await GeminiService.generateReport(
+      report,
+      settings.geminiKey,
+      buildInstruction(template.format, platform),
+      { displayName: profile.displayName, platform, targetDate: reportDate }
+    );
+    console.log('[BG] Gemini response received, length:', formattedText.length);
+  }
 
   return { report, formattedText };
 }

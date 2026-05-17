@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildInstruction } from '../storage.js';
+import { buildInstruction, getAiUsage, DEFAULT_AI_USAGE } from '../storage.js';
 
 describe('buildInstruction', () => {
   it('includes the provided format template', () => {
@@ -48,12 +48,13 @@ describe('buildInstruction', () => {
 
   it('uses default hints for unknown platform', () => {
     const result = buildInstruction('some format', 'DevOps');
-    expect(result).toContain('professional technical terminology');
+    // DEFAULT_PLATFORM_HINT now mirrors the Backend hint as a sensible fallback.
+    expect(result).toContain('Senior Backend Developer');
   });
 
   it('uses default hints when no platform provided', () => {
     const result = buildInstruction('some format');
-    expect(result).toContain('professional technical terminology');
+    expect(result).toContain('Senior Backend Developer');
     expect(result).toContain('Senior Developer Assistant');
   });
 
@@ -72,5 +73,34 @@ describe('buildInstruction', () => {
     expect(result).toContain('🎉');
     expect(result).toContain('🚀');
     expect(result).toContain('📅');
+  });
+});
+
+describe('getAiUsage', () => {
+  it('returns the Bug-specific line for Backend + Bug', () => {
+    expect(getAiUsage('Backend', 'Bug')).toBe(
+      'Scan current code to understand business logic, investigate issue, write code to fix issue and fix data if necessary.'
+    );
+  });
+
+  it('returns the Task-specific line for Backend + Task', () => {
+    expect(getAiUsage('Backend', 'Task')).toBe(
+      'Write solution design & implementation plan, generate code, generate tests'
+    );
+  });
+
+  it('falls back to the platform default when issue type is unknown', () => {
+    expect(getAiUsage('Backend', 'Story')).toBe(DEFAULT_AI_USAGE);
+    expect(getAiUsage('Backend')).toBe(DEFAULT_AI_USAGE);
+  });
+
+  it('returns the platform default for platforms without per-issue-type variants', () => {
+    expect(getAiUsage('QA', 'Bug')).toBe(
+      'Generate test cases for new API endpoints, write automation scripts for regression suite'
+    );
+  });
+
+  it('falls back to DEFAULT_AI_USAGE for an unknown platform', () => {
+    expect(getAiUsage('Marketing', 'Bug')).toBe(DEFAULT_AI_USAGE);
   });
 });

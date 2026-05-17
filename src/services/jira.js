@@ -2,7 +2,7 @@
  * Walk an ADF (Atlassian Document Format) doc and concatenate all text nodes.
  * Returns '' for missing/non-ADF input.
  */
-function extractCommentText(adf) {
+export function extractCommentText(adf) {
   if (!adf) return '';
   if (typeof adf === 'string') return adf;
   const parts = [];
