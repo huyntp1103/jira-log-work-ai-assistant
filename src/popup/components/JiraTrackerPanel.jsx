@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StorageService } from '../../services/storage.js';
 
 export default function JiraTrackerPanel() {
@@ -321,8 +321,9 @@ function TrackerRow({
         <button
           type="button"
           onClick={toggle}
-          className="flex-1 flex items-center gap-2 text-left min-w-0"
+          className="flex items-center gap-2 text-left shrink-0"
           aria-expanded={expanded}
+          aria-label={expanded ? 'Collapse tracker' : 'Expand tracker'}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -341,28 +342,37 @@ function TrackerRow({
           }`}>
             {tracker.type === 'epic' ? 'Epic' : tracker.type === 'board' ? 'Board' : 'Release'}
           </span>
-          <span className="text-[12px] font-semibold text-slate-700 truncate flex-1">
-            {tracker.label}
-          </span>
-          {rows && (
-            <span className="text-[11px] text-slate-400 font-normal shrink-0">
-              {done}/{total}
-            </span>
-          )}
         </button>
         <a
           href={trackerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-1 text-slate-300 hover:text-teal-600 transition-colors"
-          aria-label="Open in Jira"
-          title="Open in Jira"
+          className="flex-1 min-w-0 text-[12px] font-semibold text-slate-700 truncate hover:text-teal-700 hover:underline"
+          title={`Open ${tracker.label} in Jira`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-            <path d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Z" />
-            <path d="M6.194 12.753a.75.75 0 0 0 1.06.053L16.5 4.44v2.81a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.553l-9.056 8.194a.75.75 0 0 0-.053 1.06Z" />
-          </svg>
+          {tracker.label}
         </a>
+        {rows && (
+          <span className="text-[11px] text-slate-400 font-normal shrink-0">
+            {done}/{total}
+          </span>
+        )}
+        <button
+          onClick={() => { if (expanded) load(); }}
+          disabled={!expanded || loading}
+          className="p-1 text-slate-300 hover:text-teal-600 transition-colors disabled:opacity-50 disabled:hover:text-slate-300"
+          aria-label="Refresh tasks"
+          title={expanded ? 'Refresh tasks' : 'Expand to refresh'}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
+          >
+            <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z" clipRule="evenodd" />
+          </svg>
+        </button>
         <button
           onClick={onRemove}
           className="p-1 text-slate-300 hover:text-red-500 transition-colors"
@@ -404,34 +414,13 @@ function TrackerRow({
                     </div>
                     <ul className="divide-y divide-slate-100 border border-slate-100 rounded-md">
                       {group.rows.map((r) => (
-                        <li key={r.key} className="py-1.5 px-2 flex items-start gap-2">
-                          <p
-                            className="flex-1 min-w-0 text-[12px] leading-snug"
-                            style={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                            }}
-                            title={`${r.key}: ${r.summary}`}
-                          >
-                            <a
-                              href={`https://${domain}/browse/${r.key}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-indigo-600 hover:underline font-medium"
-                            >
-                              {r.key}
-                            </a>
-                            <span className="text-slate-700">: {r.summary}</span>
-                          </p>
-                          <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${style.pill}`}>
-                            {r.status}
-                          </span>
-                          <span className="shrink-0 text-[10px] text-slate-400 w-12 text-right">
-                            SP: {r.sp || '—'}
-                          </span>
-                        </li>
+                        <TaskRow
+                          key={r.key}
+                          row={r}
+                          domain={domain}
+                          pillClass={style.pill}
+                          onTransitioned={load}
+                        />
                       ))}
                     </ul>
                   </div>
@@ -442,5 +431,120 @@ function TrackerRow({
         </div>
       )}
     </div>
+  );
+}
+
+function TaskRow({ row, domain, pillClass, onTransitioned }) {
+  const [open, setOpen] = useState(false);
+  const [transitions, setTransitions] = useState(null);
+  const [loadingTransitions, setLoadingTransitions] = useState(false);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+
+  const fetchTransitions = () => {
+    setLoadingTransitions(true);
+    setError('');
+    chrome.runtime.sendMessage({ type: 'JIRA_TRANSITIONS_LIST', key: row.key }, (res) => {
+      setLoadingTransitions(false);
+      if (chrome.runtime.lastError) { setError(chrome.runtime.lastError.message); return; }
+      if (res?.type === 'JIRA_TRACKER_ERROR') { setError(res.error); return; }
+      setTransitions(res?.transitions || []);
+    });
+  };
+
+  const openDropdown = () => {
+    setOpen(true);
+    if (transitions === null && !loadingTransitions) fetchTransitions();
+  };
+
+  const apply = (transitionId) => {
+    setSubmitting(true);
+    setError('');
+    chrome.runtime.sendMessage(
+      { type: 'JIRA_TRANSITION_EXECUTE', key: row.key, transitionId },
+      (res) => {
+        setSubmitting(false);
+        if (chrome.runtime.lastError) { setError(chrome.runtime.lastError.message); return; }
+        if (res?.type === 'JIRA_TRACKER_ERROR') { setError(res.error); return; }
+        setOpen(false);
+        // Invalidate so a fresh status reloads transitions next time.
+        setTransitions(null);
+        onTransitioned?.();
+      }
+    );
+  };
+
+  return (
+    <li className="py-1.5 px-2 flex items-start gap-2">
+      <p
+        className="flex-1 min-w-0 text-[12px] leading-snug"
+        style={{
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+        title={`${row.key}: ${row.summary}`}
+      >
+        <a
+          href={`https://${domain}/browse/${row.key}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-indigo-600 hover:underline font-medium"
+        >
+          {row.key}
+        </a>
+        <span className="text-slate-700">: {row.summary}</span>
+      </p>
+      <div ref={containerRef} className="relative shrink-0">
+        <button
+          type="button"
+          onClick={() => (open ? setOpen(false) : openDropdown())}
+          disabled={submitting}
+          className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${pillClass} hover:ring-1 hover:ring-slate-300 transition-shadow disabled:opacity-50 disabled:cursor-wait`}
+          title="Change status"
+        >
+          {submitting ? 'Updating…' : row.status}
+        </button>
+        {open && (
+          <div className="absolute right-0 top-full mt-1 z-20 min-w-[140px] bg-white border border-slate-200 rounded-md shadow-md py-1">
+            {loadingTransitions && (
+              <div className="px-2 py-1 text-[11px] text-slate-400">Loading…</div>
+            )}
+            {error && (
+              <div className="px-2 py-1 text-[11px] text-red-600 max-w-[220px]">{error}</div>
+            )}
+            {!loadingTransitions && !error && transitions && transitions.length === 0 && (
+              <div className="px-2 py-1 text-[11px] text-slate-400">No transitions available.</div>
+            )}
+            {!loadingTransitions && !error && transitions && transitions.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => apply(t.id)}
+                className="w-full text-left px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <span className="shrink-0 text-[10px] text-slate-400 w-12 text-right">
+        SP: {row.sp || '—'}
+      </span>
+    </li>
   );
 }

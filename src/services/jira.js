@@ -79,6 +79,35 @@ export class JiraService {
    * Fetch a Jira issue by key. Returns null if not found.
    * Optionally restrict to a specific issue type (e.g. 'Epic').
    */
+  /**
+   * List the available workflow transitions for an issue.
+   * Returns `[{ id, name, to: { name } }]`.
+   */
+  static async getTransitions(domain, key) {
+    const data = await this.fetchJira(domain, `/rest/api/3/issue/${key}/transitions`);
+    return data.transitions || [];
+  }
+
+  /**
+   * Execute a workflow transition. Jira returns 204 No Content, so this
+   * bypasses fetchJira (which assumes a JSON body).
+   */
+  static async transitionIssue(domain, key, transitionId) {
+    const res = await fetch(`https://${domain}/rest/api/3/issue/${key}/transitions`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Atlassian-Token': 'no-check',
+      },
+      body: JSON.stringify({ transition: { id: transitionId } }),
+    });
+    if (!res.ok) {
+      throw new Error(`Jira API error: ${res.status} ${res.statusText}`);
+    }
+  }
+
   static async getIssue(domain, key, requiredType = null) {
     try {
       const issue = await this.fetchJira(domain, `/rest/api/3/issue/${key}?fields=summary,issuetype,status`);

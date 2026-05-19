@@ -50,6 +50,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'JIRA_TRANSITIONS_LIST') {
+    handleJiraTransitionsList(message)
+      .then((result) => sendResponse({ type: 'JIRA_TRANSITIONS_DATA', ...result }))
+      .catch((error) => sendResponse({ type: 'JIRA_TRACKER_ERROR', error: error.message }));
+    return true;
+  }
+
+  if (message.type === 'JIRA_TRANSITION_EXECUTE') {
+    handleJiraTransitionExecute(message)
+      .then(() => sendResponse({ type: 'JIRA_TRANSITION_DONE' }))
+      .catch((error) => sendResponse({ type: 'JIRA_TRACKER_ERROR', error: error.message }));
+    return true;
+  }
+
   if (message.type === 'JIRA_RECENT_TICKETS') {
     handleJiraRecentTickets(message)
       .then((result) => sendResponse({ type: 'JIRA_RECENT_TICKETS_DATA', ...result }))
@@ -271,6 +285,21 @@ export async function handleJiraTrackerTasks({ tracker, allAssignees = false }) 
   }));
 
   return { rows, domain };
+}
+
+export async function handleJiraTransitionsList({ key }) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first.');
+  if (!key) throw new Error('Missing issue key.');
+  const transitions = await JiraService.getTransitions(domain, key);
+  return { transitions };
+}
+
+export async function handleJiraTransitionExecute({ key, transitionId }) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first.');
+  if (!key || !transitionId) throw new Error('Missing key or transitionId.');
+  await JiraService.transitionIssue(domain, key, transitionId);
 }
 
 export async function handleJiraRecentTickets({ days = 7 } = {}) {
