@@ -219,7 +219,7 @@ export class StorageService {
     const result = await chrome.storage.sync.get('jiraTrackerOptions');
     return {
       allAssignees: false,
-      hideQaSuccess: true,
+      hideOther: true,
       ...(result.jiraTrackerOptions || {}),
     };
   }

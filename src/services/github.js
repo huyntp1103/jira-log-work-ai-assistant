@@ -102,13 +102,34 @@ export class GitHubService {
   static async extractTicketMap(events, timeConfig, token) {
     const prTextCache = new Map();
 
-    // Resolve a PR-event's text: prefer payload title+head.ref; if no ticket ID is found,
-    // fetch the PR and use title+body.
+    // Pre-pass: any PR event publishes a branch → title-IDs mapping. Push and
+    // Create events on the same branch defer to this mapping, so a branch like
+    // "feat/UP-70470" no longer overrides the PR's title (e.g. "UP-70323 ...").
+    const branchToTitleIds = new Map();
+    for (const event of events) {
+      if (event.type !== 'PullRequestEvent'
+          && event.type !== 'PullRequestReviewEvent'
+          && event.type !== 'PullRequestReviewCommentEvent') continue;
+      const pr = event.payload.pull_request;
+      const branch = pr?.head?.ref;
+      if (!branch || branchToTitleIds.has(branch)) continue;
+      const titleIds = extractIds(pr?.title || '');
+      if (titleIds.length > 0) branchToTitleIds.set(branch, titleIds);
+    }
+
+    const branchFromRef = (ref) => (ref || '').replace(/^refs\/heads\//, '');
+
+    // Resolve a PR-event's ticket IDs with title > branch > PR body priority.
+    // Title wins outright when it contains any ID, so a branch-only ID (often a
+    // related-but-different ticket, e.g. a parent epic on the source branch)
+    // does not get picked up alongside the title's ID.
     const resolvePrIds = async (event) => {
       const pr = event.payload.pull_request;
-      const inline = (pr?.title || '') + ' ' + (pr?.head?.ref || '');
-      const inlineIds = extractIds(inline);
-      if (inlineIds.length > 0 || !token || !pr?.url) return inlineIds;
+      const titleIds = extractIds(pr?.title || '');
+      if (titleIds.length > 0) return titleIds;
+      const branchIds = extractIds(pr?.head?.ref || '');
+      if (branchIds.length > 0) return branchIds;
+      if (!token || !pr?.url) return [];
       const remote = await GitHubService.fetchPrText(pr.url, token, prTextCache);
       return extractIds(remote);
     };
@@ -134,15 +155,24 @@ export class GitHubService {
       if (event.type === 'PushEvent') {
         eventType = 'commit';
         eventSeconds = timeConfig.timeCommit;
-        const ref = event.payload.ref || '';
+        const branch = branchFromRef(event.payload.ref);
         const msgs = (event.payload.commits || []).map((c) => c.message).join(' ');
-        ticketIds = extractIds(ref + ' ' + msgs);
+        const mapped = branchToTitleIds.get(branch);
+        if (mapped) {
+          // Prefer the PR's title-derived IDs; still include any IDs the user
+          // explicitly typed into commit messages.
+          ticketIds = [...new Set([...mapped, ...extractIds(msgs)])];
+        } else {
+          ticketIds = extractIds(branch + ' ' + msgs);
+        }
       }
       // CASE 2: Create branch
       else if (event.type === 'CreateEvent' && event.payload.ref_type === 'branch') {
         eventType = 'commit';
         eventSeconds = timeConfig.timeCommit;
-        ticketIds = extractIds(event.payload.ref || '');
+        const branch = event.payload.ref || '';
+        const mapped = branchToTitleIds.get(branch);
+        ticketIds = mapped ? mapped : extractIds(branch);
       }
       // CASE 3: PR actions (opened, merged, reopened)
       else if (event.type === 'PullRequestEvent') {

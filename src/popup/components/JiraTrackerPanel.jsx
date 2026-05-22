@@ -9,7 +9,7 @@ export default function JiraTrackerPanel() {
   const [domain, setDomain] = useState('');
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
-  const [options, setOptions] = useState({ allAssignees: false, hideQaSuccess: true });
+  const [options, setOptions] = useState({ allAssignees: false, hideOther: true });
 
   useEffect(() => {
     StorageService.getTrackers().then(setTrackers);
@@ -125,9 +125,9 @@ export default function JiraTrackerPanel() {
             onChange={() => toggleOption('allAssignees')}
           />
           <Toggle
-            label="Hide QA Success"
-            checked={options.hideQaSuccess}
-            onChange={() => toggleOption('hideQaSuccess')}
+            label="Hide other status"
+            checked={options.hideOther}
+            onChange={() => toggleOption('hideOther')}
           />
         </div>
       </div>
@@ -165,7 +165,6 @@ const STATUS_ORDER = [
   'In Review',
   'QA Ready',
   'In Test',
-  'QA Success',
 ];
 
 // Tailwind classes per status (group header and per-row pill share the same palette).
@@ -176,7 +175,6 @@ const STATUS_STYLES = {
   'In Review':   { pill: 'bg-violet-100 text-violet-700',   header: 'text-violet-700' },
   'QA Ready':    { pill: 'bg-amber-100 text-amber-700',     header: 'text-amber-700' },
   'In Test':     { pill: 'bg-cyan-100 text-cyan-700',       header: 'text-cyan-700' },
-  'QA Success':  { pill: 'bg-emerald-100 text-emerald-700', header: 'text-emerald-700' },
   Other:         { pill: 'bg-slate-100 text-slate-600',     header: 'text-slate-500' },
 };
 
@@ -291,10 +289,10 @@ function TrackerRow({
   }, [options.allAssignees]);
 
   const visibleRows = rows
-    ? rows.filter((r) => !(options.hideQaSuccess && normalizeStatus(r.status) === 'QA Success'))
+    ? rows.filter((r) => !(options.hideOther && normalizeStatus(r.status) === 'Other'))
     : null;
   const total = rows?.length || 0;
-  const done = rows?.filter((r) => normalizeStatus(r.status) === 'QA Success').length || 0;
+  const done = rows?.filter((r) => r.status?.toLowerCase() === 'qa success').length || 0;
   const groups = visibleRows ? groupByStatus(visibleRows) : [];
 
   return (
