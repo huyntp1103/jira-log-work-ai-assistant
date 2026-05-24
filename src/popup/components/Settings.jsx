@@ -18,6 +18,19 @@ export default function Settings({ onBack }) {
   const [apiStatus, setApiStatus] = useState(null);
   const [apiError, setApiError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [usage, setUsage] = useState(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const refreshUsage = async () => {
+    setUsageLoading(true);
+    try {
+      const u = await StorageService.getStorageUsage();
+      setUsage(u);
+    } finally {
+      setUsageLoading(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -27,7 +40,18 @@ export default function Settings({ onBack }) {
       setSettings(s);
       setGithub(g);
     });
+    refreshUsage();
   }, []);
+
+  const handleClearDailyCache = async () => {
+    setClearing(true);
+    try {
+      await StorageService.clearDailyCache();
+      await refreshUsage();
+    } finally {
+      setClearing(false);
+    }
+  };
 
   const handleSave = async () => {
     await Promise.all([
@@ -233,6 +257,41 @@ export default function Settings({ onBack }) {
         </div>
       </div>
 
+      {/* Storage */}
+      <div className="bg-white rounded-lg border border-slate-200 p-3.5 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[13px] font-semibold text-slate-800">Local Storage</h3>
+          <button
+            type="button"
+            onClick={refreshUsage}
+            disabled={usageLoading}
+            className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:text-slate-400"
+          >
+            {usageLoading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
+        {!usage && <p className="text-[11px] text-slate-400">Loading usage…</p>}
+        {usage && (
+          <>
+            <StorageArea title="Sync (across devices)" data={usage.sync} />
+            <StorageArea title="Local (this device)"   data={usage.local} />
+            <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
+              <div className="text-[11px] text-slate-500">
+                Daily report cache holds up to 30 days of saved reports.
+              </div>
+              <button
+                type="button"
+                onClick={handleClearDailyCache}
+                disabled={clearing}
+                className="px-2.5 py-1.5 text-[11px] font-medium text-red-600 border border-red-200 rounded hover:bg-red-50 disabled:opacity-50 transition-colors"
+              >
+                {clearing ? 'Clearing…' : 'Clear daily cache'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
       {/* Actions */}
       <div className="flex gap-2">
         <button
@@ -250,6 +309,35 @@ export default function Settings({ onBack }) {
           {saved ? 'Saved!' : 'Save Settings'}
         </button>
       </div>
+    </div>
+  );
+}
+
+function formatBytes(n) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function StorageArea({ title, data }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-[11px] mb-1">
+        <span className="font-medium text-slate-600">{title}</span>
+        <span className="font-mono text-slate-500">{formatBytes(data.total)}</span>
+      </div>
+      {data.items.length === 0 ? (
+        <p className="text-[11px] text-slate-400 italic">Empty</p>
+      ) : (
+        <ul className="divide-y divide-slate-100 border border-slate-100 rounded">
+          {data.items.map((item) => (
+            <li key={item.key} className="flex items-center justify-between px-2 py-1 text-[11px]">
+              <span className="text-slate-600 truncate" title={item.key}>{item.key}</span>
+              <span className="font-mono text-slate-500 shrink-0 ml-2">{formatBytes(item.bytes)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

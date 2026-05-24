@@ -20,7 +20,7 @@ Three-tab layout with shared header controls:
 - **Tab Bar (order):** "Jira Tasks" (emerald) | "GitHub Sync" (violet) | "Daily Report" (blue). Independent state per tab. **Default tab: Jira Tasks.**
 - **Date Picker + Save:** Shown for GitHub Sync and Daily Report tabs only — hidden on Jira Tasks. Defaults to today, capped at today (no future dates). Changing the date auto-loads cache for both date-bound tabs.
 - **Cache Badge:** Shows "Saved HH:MM" next to DatePicker when a cache entry exists for the picked date.
-- **Save Button:** Appears when either date-bound tab has content. Saves both report text and GitHub rows together.
+- **Save Button:** Appears on the Daily Report tab when it has report text. Saves report text only — GitHub Sync rows are no longer cached (the tab refetches on demand).
 
 ### Jira Tasks tab (default)
 
@@ -30,12 +30,12 @@ Three-tab layout with shared header controls:
   - Board URL (e.g. `https://<domain>/jira/software/c/projects/UP/boards/26?...`) → board. The pasted URL is stored under `tracker.url` so the open-in-Jira link preserves your `assignee` / `issueType` filters.
 - **Global toggles** below a thin divider:
   - **All assignees** — default off. When on, the worker drops `assignee = currentUser()` from the JQL.
-  - **Hide QA Success** — default on. Client-side filter (no re-fetch needed).
-- **Tracker list:** Each tracker is a collapsible card. Header shows: drag handle (6-dot grip), expand chevron, type badge (`EPIC` violet / `RELEASE` amber / `BOARD` cyan), label, `done/total` count, open-in-Jira link, delete button.
+  - **Hide other status** — default on. Client-side filter that hides the `Other` bucket (no re-fetch). `QA Success` lives in `Other` now, so this toggle hides QA-completed tickets along with anything else off the canonical list.
+- **Tracker header:** drag handle (6-dot grip), expand chevron + type badge (`EPIC` violet / `RELEASE` amber / `BOARD` cyan) — these together toggle expand. The tracker label is itself a link that opens it in Jira (board URL preserved when present); `done/total` count (counts raw `QA Success`); refresh icon (reloads tasks; only enabled when expanded); remove icon.
 - **Board scope:** an expanded board tracker shows tasks from the board's **active sprint** (resolved via `/rest/agile/1.0/board/{id}/sprint?state=active`). If no active sprint exists, an inline error is shown.
 - **Reordering:** Drag the grip to reorder. Dragged card fades to 40% opacity; drop target shows a blue ring. Order persists to `chrome.storage.sync`.
-- **Expanded tracker:** Tasks are grouped by status in this fixed order — **QA Failed → To Do → In Progress → In Review → QA Ready → In Test → QA Success → Other**. Each group has a colored pill header matching its status palette.
-- **Task row:** Single-line layout — Key + Title (2-line clamp before ellipsis) on the left, status pill, then SP on the right.
+- **Expanded tracker:** Tasks are grouped by status in this fixed order — **QA Failed → To Do → In Progress → In Review → QA Ready → In Test → Other**. Each group has a colored pill header matching its status palette.
+- **Task row:** Single-line layout — Key + Title (2-line clamp before ellipsis) on the left, **clickable status pill** that opens a dropdown of available Jira workflow transitions, then SP on the right. Selecting a transition calls Jira's transitions API and reloads the tracker.
 
 ### GitHub Sync tab
 
@@ -58,10 +58,12 @@ Three-tab layout with shared header controls:
 
 ### B. Settings view
 
-- **API Key Input:** Password-type field with "Show/Hide" toggle.
-- **GitHub credentials:** Username, PAT, and optional allowed-repos filter.
-- **SP configuration:** Customise Story Point to Hours ratio.
-- **API status check:** Real-time indicator of Gemini API connectivity/quota status.
+- **Templates:** CRUD via `TemplateSelector` (see Template editor below).
+- **Report Engine toggle:** segmented control — **Gemini AI** vs **Local Formatter**. Persisted as `settings.reportEngine`. When `local` is selected the Gemini key field becomes optional and no Gemini API call is made on **Generate Report**.
+- **API Key Input:** Password-type field with "Show/Hide" toggle. Inline connection status indicator after **Save** (green/red dot).
+- **Advanced:** Story Point field ID + Hours per Story Point.
+- **GitHub credentials:** Username, PAT (with Show/Hide), and optional comma-separated allowed-repos filter. Per-event time defaults (Commit / PR Approved / PR Comment) live here too.
+- **Local Storage card:** total bytes per area (`chrome.storage.sync` + `chrome.storage.local`) plus a per-key breakdown sorted largest-first. **Refresh** button re-reads usage; **Clear daily cache** removes the `dailyCache` key. Helps users see where storage is going and prune it without leaving the side panel.
 
 ### C. Template editor
 
@@ -127,8 +129,9 @@ Same palette is used for both the group header pill and the per-row status chip:
 | In Review     | `bg-violet-100 text-violet-700`      |
 | QA Ready      | `bg-amber-100 text-amber-700`        |
 | In Test       | `bg-cyan-100 text-cyan-700`          |
-| QA Success    | `bg-emerald-100 text-emerald-700`    |
 | Other         | `bg-slate-100 text-slate-600`        |
+
+`QA Success` is intentionally not its own group — it falls into **Other** (kept out of the way of in-flight work). The done/total counter in the tracker header still counts raw `QA Success` rows so you can see completion at a glance.
 
 ### Typography
 

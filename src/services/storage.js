@@ -235,13 +235,12 @@ export class StorageService {
     return cache[date] || null;
   }
 
-  static async setDailyCache(date, { reportText, githubRows }) {
+  static async setDailyCache(date, { reportText }) {
     const result = await chrome.storage.local.get('dailyCache');
     const cache = result.dailyCache || {};
 
     cache[date] = {
       reportText: reportText ?? cache[date]?.reportText ?? '',
-      githubRows: githubRows ?? cache[date]?.githubRows ?? [],
       savedAt: new Date().toISOString(),
     };
 
@@ -252,5 +251,38 @@ export class StorageService {
     }
 
     await chrome.storage.local.set({ dailyCache: cache });
+  }
+
+  /**
+   * Inspect Chrome storage usage for this extension. Returns total bytes per
+   * storage area plus a per-key breakdown so the Settings page can show what's
+   * consuming space.
+   */
+  static async getStorageUsage() {
+    const [syncTotal, localTotal, syncAll, localAll] = await Promise.all([
+      chrome.storage.sync.getBytesInUse(null),
+      chrome.storage.local.getBytesInUse(null),
+      chrome.storage.sync.get(null),
+      chrome.storage.local.get(null),
+    ]);
+
+    const breakdown = async (area, all) => {
+      const keys = Object.keys(all);
+      const sizes = await Promise.all(keys.map((k) => area.getBytesInUse(k)));
+      return keys.map((k, i) => ({ key: k, bytes: sizes[i] }))
+        .sort((a, b) => b.bytes - a.bytes);
+    };
+
+    return {
+      sync:  { total: syncTotal,  items: await breakdown(chrome.storage.sync,  syncAll) },
+      local: { total: localTotal, items: await breakdown(chrome.storage.local, localAll) },
+    };
+  }
+
+  /**
+   * Clear the daily report cache (largest item in chrome.storage.local).
+   */
+  static async clearDailyCache() {
+    await chrome.storage.local.remove('dailyCache');
   }
 }

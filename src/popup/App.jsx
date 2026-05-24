@@ -51,15 +51,9 @@ export default function App() {
         setReportFromCache(false);
       }
 
-      if (cached.githubRows) {
-        setGithubRows(cached.githubRows);
-        setGithubFetchKey((k) => k + 1);
-        setGithubFromCache(true);
-      } else {
-        setGithubRows(null);
-        setGithubFetchKey(0);
-        setGithubFromCache(false);
-      }
+      setGithubRows(null);
+      setGithubFetchKey(0);
+      setGithubFromCache(false);
     }
     checkAndLoad();
     return () => { cancelled = true; };
@@ -76,7 +70,6 @@ export default function App() {
   const handleSave = async () => {
     await StorageService.setDailyCache(date, {
       reportText: formattedText || undefined,
-      githubRows: githubRows || undefined,
     });
     const saved = await StorageService.getDailyCache(date);
     setCacheInfo({ savedAt: saved.savedAt });

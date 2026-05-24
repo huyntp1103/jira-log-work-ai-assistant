@@ -81,6 +81,10 @@ Popup → Background: { type: 'JIRA_TRACKER_DETECT', input }
 Background → Popup: { type: 'JIRA_TRACKER_DETECTED', tracker }
 Popup → Background: { type: 'JIRA_TRACKER_TASKS', tracker, allAssignees }
 Background → Popup: { type: 'JIRA_TRACKER_TASKS_DATA', rows, domain }
+Popup → Background: { type: 'JIRA_TRANSITIONS_LIST', key }
+Background → Popup: { type: 'JIRA_TRANSITIONS_DATA', transitions: [{ id, name, to: { name } }] }
+Popup → Background: { type: 'JIRA_TRANSITION_EXECUTE', key, transitionId }
+Background → Popup: { type: 'JIRA_TRANSITION_DONE' }
 Background → Popup: { type: 'JIRA_TRACKER_ERROR', error }
 ```
 
@@ -150,12 +154,23 @@ AND (
   - Epic:    `[assignee = currentUser() AND ]parent = {key} ORDER BY status, key`
   - Board:   resolve active sprint via `/rest/agile/1.0/board/{id}/sprint?state=active`, then `[assignee = currentUser() AND ]sprint = {sprintId} ORDER BY status, key`. Errors with a friendly message if there is no active sprint.
   - The `assignee` clause is dropped when the **All assignees** toggle is on.
-- **Status grouping order:** QA Failed → To Do → In Progress → In Review → QA Ready → In Test → QA Success → Other.
-- **Hide QA Success** is a client-side filter (no re-fetch needed).
+- **Status grouping order:** QA Failed → To Do → In Progress → In Review → QA Ready → In Test → Other. Any status not in this list — including `QA Success` — falls into the **Other** bucket.
+- **Hide other status** (the renamed toggle, persisted as `hideOther`) is a client-side filter (no re-fetch needed) that hides the `Other` bucket.
+- **Per-task status change:** the row's status pill is clickable. On open the popup queries Jira via `JIRA_TRANSITIONS_LIST` and shows available workflow transitions; picking one fires `JIRA_TRANSITION_EXECUTE` and reloads the tracker.
+- **Tracker header:** chevron + type badge toggle expand/collapse; the tracker label is itself a link to the tracker in Jira (board URL stored under `tracker.url` is honoured when present). A refresh icon next to the remove icon reloads tasks for the expanded tracker.
 
-### I. GitHub Sync — PR-body fallback
+### I. GitHub Sync — ID extraction priority
 
-`GitHubService.extractTicketMap` is async. When a PR-related event lacks a Jira ID in `pr.title + pr.head.ref` (common for `PullRequestReviewEvent` — title isn't present in the events feed), it fetches the PR via `pr.url` and scans `title + body`. Per-URL caching avoids duplicate fetches across both passes.
+`GitHubService.extractTicketMap` is async and applies the following priority:
+
+**PR events** (`PullRequestEvent`, `PullRequestReviewEvent`, `PullRequestReviewCommentEvent`): `pr.title` > `pr.head.ref` > remote `pr.title + pr.body` (fetched via `pr.url`, with per-URL caching). The first source that produces any `XX-NNN` wins outright — so a branch-only ID is never picked up alongside the title's ID.
+
+**Push / Create-branch events:** a pre-pass over the same batch scans PR/Review events and builds a `branch → title-IDs` map.
+
+- `PushEvent`: when the pushed branch is in the map, IDs = mapped title IDs ∪ IDs from commit messages. Otherwise IDs = extract from `ref + commit messages` (legacy behaviour).
+- `CreateEvent` (`ref_type === 'branch'`): when the branch is in the map, IDs = mapped title IDs. Otherwise IDs = extract from the branch name.
+
+This makes a PR titled `UP-70323 ...` on branch `feat/UP-70470-2` resolve to `UP-70323` (not `UP-70470`) across all the day's push and create events, provided at least one PR-event for that branch is in the same date window.
 
 ## 3. Progress Calculation
 
@@ -228,7 +243,8 @@ Report Date: {next working day after the picked date}
     "hoursPerPoint": 4,
     "timeCommit": 3600,
     "timeApprove": 900,
-    "timeComment": 900
+    "timeComment": 900,
+    "reportEngine": "gemini"
   },
   "templates": [
     {
@@ -247,7 +263,7 @@ Report Date: {next working day after the picked date}
   ],
   "jiraTrackerOptions": {
     "allAssignees": false,
-    "hideQaSuccess": true
+    "hideOther": true
   }
 }
 ```
@@ -262,11 +278,12 @@ Report Date: {next working day after the picked date}
   "dailyCache": {
     "2026-05-12": {
       "reportText": "STRING",
-      "githubRows": [{ "key": "...", "summary": "...", "seconds": 3600, "description": "..." }],
       "savedAt":    "ISO-8601"
     }
   }
 }
 ```
 
-`dailyCache` is pruned to the last 30 entries on save.
+`dailyCache` holds the saved daily report text only — `githubRows` are no longer cached (the GitHub Sync tab refetches on demand) to keep local-storage usage small. The cache is pruned to the last 30 entries on save.
+
+Settings → **Local Storage** card visualises `chrome.storage.sync` and `chrome.storage.local` usage with per-key sizes (via `chrome.storage.{sync,local}.getBytesInUse`) and exposes a **Clear daily cache** action.
