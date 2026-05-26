@@ -186,7 +186,7 @@ export class StorageService {
 
   static async getJiraDomain() {
     const result = await chrome.storage.sync.get('jiraDomain');
-    return result.jiraDomain || '';
+    return result.jiraDomain || 'everfit.atlassian.net';
   }
 
   static async setJiraDomain(domain) {
