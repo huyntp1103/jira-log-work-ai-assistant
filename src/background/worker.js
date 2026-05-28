@@ -64,6 +64,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'JIRA_ISSUE_CREATE') {
+    handleJiraIssueCreate(message)
+      .then((result) => sendResponse({ type: 'JIRA_ISSUE_CREATED', ...result }))
+      .catch((error) => sendResponse({ type: 'JIRA_TRACKER_ERROR', error: error.message }));
+    return true;
+  }
+
   if (message.type === 'JIRA_RECENT_TICKETS') {
     handleJiraRecentTickets(message)
       .then((result) => sendResponse({ type: 'JIRA_RECENT_TICKETS_DATA', ...result }))
@@ -300,6 +307,51 @@ export async function handleJiraTransitionExecute({ key, transitionId }) {
   if (!domain) throw new Error('Please open a Jira tab first.');
   if (!key || !transitionId) throw new Error('Missing key or transitionId.');
   await JiraService.transitionIssue(domain, key, transitionId);
+}
+
+/**
+ * Create a Jira issue inside an Epic. Used by the "+ Add task" button on
+ * Epic trackers in the Jira Tasks tab.
+ *
+ * Resolves "To be confirmed" version by name (case-insensitive) from the
+ * project's versions; falls back to no fixVersion if not present.
+ */
+export async function handleJiraIssueCreate({
+  epicKey,
+  issueType = 'Task',
+  summary,
+  description = '',
+  storyPoints = 0.5,
+  priorityName = 'Medium',
+  fixVersionId,
+}) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first.');
+  if (!epicKey) throw new Error('Missing epic key.');
+  if (!summary?.trim()) throw new Error('Title is required.');
+
+  const projectKey = String(epicKey).split('-')[0];
+  if (!projectKey) throw new Error(`Could not derive project key from "${epicKey}".`);
+
+  const settings = await StorageService.getSettings();
+  const profile = await JiraService.getMyProfile(domain);
+
+  const fixVersionIds = fixVersionId ? [String(fixVersionId)] : [];
+
+  const created = await JiraService.createIssue(domain, {
+    projectKey,
+    summary: summary.trim(),
+    description,
+    issueType,
+    priorityName,
+    assigneeAccountId: profile.accountId,
+    parentKey: epicKey,
+    storyPoints,
+    spField: settings.spField,
+    fixVersionIds,
+  });
+
+  return { key: created.key, id: created.id };
 }
 
 export async function handleJiraRecentTickets({ days = 7 } = {}) {

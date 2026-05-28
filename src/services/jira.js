@@ -274,6 +274,48 @@ export class JiraService {
    * (relative to today, server time). Returns deduplicated `[{ key, summary }]`,
    * most-recently-active first.
    */
+  /**
+   * Create a new Jira issue.
+   *
+   * @param {string} domain
+   * @param {object} opts
+   * @param {string} opts.projectKey
+   * @param {string} opts.summary
+   * @param {string} [opts.description]      Plain text; wrapped into ADF.
+   * @param {string} opts.issueType          e.g. 'Task' | 'Bug'
+   * @param {string} [opts.priorityName]     e.g. 'Medium'
+   * @param {string} [opts.assigneeAccountId]
+   * @param {string} [opts.parentKey]        Epic key (for Epic linkage on Jira Cloud).
+   * @param {number} [opts.storyPoints]
+   * @param {string} [opts.spField]          Custom field id for story points.
+   * @param {string[]} [opts.fixVersionIds]
+   * @returns {Promise<{ id: string, key: string }>}
+   */
+  static async createIssue(domain, opts) {
+    const fields = {
+      project: { key: opts.projectKey },
+      summary: opts.summary,
+      issuetype: { name: opts.issueType },
+    };
+    if (opts.description) {
+      fields.description = {
+        type: 'doc',
+        version: 1,
+        content: [{
+          type: 'paragraph',
+          content: [{ type: 'text', text: opts.description }],
+        }],
+      };
+    }
+    if (opts.priorityName) fields.priority = { name: opts.priorityName };
+    if (opts.assigneeAccountId) fields.assignee = { accountId: opts.assigneeAccountId };
+    if (opts.parentKey) fields.parent = { key: opts.parentKey };
+    if (opts.storyPoints != null && opts.spField) fields[opts.spField] = opts.storyPoints;
+    if (opts.fixVersionIds?.length) fields.fixVersions = opts.fixVersionIds.map((id) => ({ id }));
+
+    return this.fetchJira(domain, '/rest/api/3/issue', 'POST', { fields });
+  }
+
   static async fetchRecentTickets(domain, accountId, days = 7) {
     const data = await this.searchJql(
       domain,

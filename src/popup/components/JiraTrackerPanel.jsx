@@ -244,6 +244,7 @@ function TrackerRow({
   const [rows, setRows] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
 
   let trackerUrl;
   if (tracker.url) {
@@ -355,6 +356,18 @@ function TrackerRow({
             {done}/{total}
           </span>
         )}
+        {tracker.type === 'epic' && (
+          <button
+            onClick={() => { setShowCreate((v) => !v); if (!expanded) setExpanded(true); }}
+            className={`p-1 transition-colors ${showCreate ? 'text-teal-600' : 'text-slate-300 hover:text-teal-600'}`}
+            aria-label="Add task to epic"
+            title="Add task to this Epic"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clipRule="evenodd" />
+            </svg>
+          </button>
+        )}
         <button
           onClick={() => { if (expanded) load(); }}
           disabled={!expanded || loading}
@@ -385,6 +398,13 @@ function TrackerRow({
 
       {expanded && (
         <div className="border-t border-slate-100 px-3 py-2.5 space-y-2">
+          {showCreate && tracker.type === 'epic' && (
+            <CreateTaskForm
+              epicKey={tracker.id}
+              onCancel={() => setShowCreate(false)}
+              onCreated={() => { setShowCreate(false); load(); }}
+            />
+          )}
           {loading && (
             <div className="space-y-1.5">
               {[0, 1, 2].map((i) => <div key={i} className="h-7 rounded bg-slate-100 animate-pulse" />)}
@@ -428,6 +448,146 @@ function TrackerRow({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// Hardcoded fix-version choices for the Create-Task form, sourced from the
+// `recommend/fields` API response on everfit.atlassian.net.
+const FIX_VERSION_OPTIONS = [
+  { id: '12023', label: 'To be confirmed' },
+  { id: '10244', label: 'N/A' },
+];
+
+function CreateTaskForm({ epicKey, onCancel, onCreated }) {
+  const [issueType, setIssueType] = useState('Task');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [storyPoints, setStoryPoints] = useState('0.5');
+  const [priority, setPriority] = useState('Medium');
+  const [fixVersionId, setFixVersionId] = useState(FIX_VERSION_OPTIONS[0].id);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = () => {
+    if (!title.trim()) { setError('Title is required.'); return; }
+    setSubmitting(true);
+    setError('');
+    const sp = Number(storyPoints);
+    chrome.runtime.sendMessage(
+      {
+        type: 'JIRA_ISSUE_CREATE',
+        epicKey,
+        issueType,
+        summary: title.trim(),
+        description,
+        storyPoints: Number.isFinite(sp) ? sp : 0.5,
+        priorityName: priority,
+        fixVersionId,
+      },
+      (res) => {
+        setSubmitting(false);
+        if (chrome.runtime.lastError) { setError(chrome.runtime.lastError.message); return; }
+        if (res?.type === 'JIRA_TRACKER_ERROR') { setError(res.error); return; }
+        onCreated?.(res?.key);
+      }
+    );
+  };
+
+  return (
+    <div className="rounded-md border border-dashed border-teal-300 bg-teal-50/40 p-2.5 space-y-2">
+      <div className="text-[11px] font-semibold text-teal-700">Create task in {epicKey}</div>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-0.5">
+          <span className="text-[10px] text-slate-500">Type</span>
+          <select
+            value={issueType}
+            onChange={(e) => setIssueType(e.target.value)}
+            className="px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          >
+            <option value="Task">Task</option>
+            <option value="Bug">Bug</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-0.5">
+          <span className="text-[10px] text-slate-500">Priority</span>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            className="px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          >
+            <option value="Highest">Highest</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+            <option value="Lowest">Lowest</option>
+          </select>
+        </label>
+      </div>
+      <label className="flex flex-col gap-0.5">
+        <span className="text-[10px] text-slate-500">Title</span>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => { setTitle(e.target.value); setError(''); }}
+          placeholder="What needs to be done?"
+          className="px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+        />
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <span className="text-[10px] text-slate-500">Description</span>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={2}
+          placeholder="Optional"
+          className="px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500 resize-y"
+        />
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-0.5">
+          <span className="text-[10px] text-slate-500">Story Points</span>
+          <input
+            type="number"
+            min="0"
+            step="0.5"
+            value={storyPoints}
+            onChange={(e) => setStoryPoints(e.target.value)}
+            className="px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          />
+        </label>
+        <label className="flex flex-col gap-0.5">
+          <span className="text-[10px] text-slate-500">Fix versions</span>
+          <select
+            value={fixVersionId}
+            onChange={(e) => setFixVersionId(e.target.value)}
+            className="px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          >
+            {FIX_VERSION_OPTIONS.map((opt) => (
+              <option key={opt.id} value={opt.id}>{opt.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {error && <div className="text-[11px] text-red-600">{error}</div>}
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          className="px-2 py-1 rounded text-[11px] text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={submitting || !title.trim()}
+          className="px-2.5 py-1 rounded text-[11px] font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+        >
+          {submitting ? 'Creating…' : 'Create'}
+        </button>
+      </div>
     </div>
   );
 }

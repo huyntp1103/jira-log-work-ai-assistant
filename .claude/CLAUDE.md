@@ -32,7 +32,9 @@ Tab order (left → right) and default: **Jira Tasks** (default) | **GitHub Sync
    - Two global toggles (persisted under `jiraTrackerOptions`): **All assignees** (default off — drops `assignee = currentUser()` from JQL) and **Hide other status** (default on — client-side filter hiding the `Other` bucket, which is where `QA Success` lives).
    - **Tracker header:** chevron + type badge toggles expand; the tracker label itself is a link that opens it in Jira; refresh + remove icons on the right. The done/total count counts rows whose raw status is `QA Success`.
    - **Per-task status pill** is a click-to-open dropdown listing the issue's Jira workflow transitions (loaded on demand via `JIRA_TRANSITIONS_LIST`); selecting one calls `JIRA_TRANSITION_EXECUTE` and reloads the tracker.
+   - **Create task in an Epic:** Epic trackers show a `+` button in the header. It expands an inline form scoped to that Epic with fields: **Type** (Task / Bug, default Task), **Title** (required), **Description** (optional), **Story Points** (default `0.5`), **Priority** (Highest / High / Medium / Low / Lowest, default Medium), **Fix versions** (default "To be confirmed", or "N/A" — see below). The assignee is auto-set to the current Jira user, and the new ticket is linked to the Epic via the `parent` field. On submit, the worker calls `JIRA_ISSUE_CREATE` and the tracker reloads so the new ticket appears.
    - Default project key for bare-number lookups is hardcoded `UP`.
+   - Default Jira domain (when none has been captured from a tab yet) is hardcoded `everfit.atlassian.net` in `StorageService.getJiraDomain`.
 
 2. **GitHub Sync** — Auto-create Jira worklogs from GitHub activity.
    - Fetch user events for the picked date, extract Jira ticket IDs from commits/branches/PR titles/PR bodies, build a preview table, then bulk-create worklogs.
@@ -60,6 +62,7 @@ Tab order (left → right) and default: **Jira Tasks** (default) | **GitHub Sync
   - `getVersion(id)`, `getIssue(key, requiredType)` — used for tracker detection.
   - `getBoard(id)`, `getActiveSprintForBoard(boardId)` — used for board tracker detection and to scope its task list to the currently active sprint.
   - `getTransitions(domain, key)` / `transitionIssue(domain, key, transitionId)` — list workflow transitions and execute one. Powers the per-task status dropdown in the Jira Tasks tab. `transitionIssue` bypasses `fetchJira` (Jira returns 204 No Content on success).
+  - `createIssue(domain, opts)` — POST `/rest/api/3/issue`. Used by the **Create task in Epic** feature. Wraps the description in ADF, sets the Epic link via `parent: { key: epicKey }` (Jira Cloud), sets Story Points via the configured `spField` custom field, and accepts an array of `fixVersionIds`.
   - `fetchMyWorklogs(domain, accountId, date)` — flat user worklogs for a date, sorted ascending. Falls back to `/issue/{key}/worklog?startedAfter=...&startedBefore=...` when the embedded array hits the 20-item cap (Jira truncates oldest-first).
   - `resolveWorklogsForDate(domain, issues, date)` — shared 20-cap fallback used by both the preview and the report engine, so totals match.
   - `fetchRecentTickets(domain, accountId, days = 7)` — deduplicated `[{key, summary}]` for tickets the user has worklogged in the window, most-recent-activity first. Powers the **Log new time** dropdown.
@@ -102,6 +105,7 @@ The `src/popup/` folder name is historical (predates the side panel migration). 
   - `JIRA_WORKLOG_PREVIEW`, `JIRA_WORKLOG_UPDATE`, `JIRA_WORKLOG_CREATE`, `JIRA_RECENT_TICKETS`
   - `JIRA_TRACKER_DETECT`, `JIRA_TRACKER_TASKS`
   - `JIRA_TRANSITIONS_LIST`, `JIRA_TRANSITION_EXECUTE`
+  - `JIRA_ISSUE_CREATE` — creates a Jira issue inside an Epic (used by the "+ Add task" button on Epic trackers).
 - **`src/content/main.js`** — Captures `window.location.hostname` on Jira tabs and writes `jiraDomain` to storage.
 
 ## Key Implementation Details
@@ -143,6 +147,20 @@ Worker `handleJiraTrackerDetect`:
 - Board:   resolve active sprint via `/rest/agile/1.0/board/{id}/sprint?state=active`, then `[assignee = currentUser() AND ]sprint = {sprintId} ORDER BY status, key`. Errors with a friendly message if the board has no active sprint.
 
 The `assignee` clause is dropped when the **All assignees** toggle is on.
+
+### Create task in Epic (worker `handleJiraIssueCreate`)
+
+- Triggered by the "+ Add task" button on Epic-type trackers in the Jira Tasks tab.
+- **Project key** is derived from the Epic key by splitting on `-` (e.g. `UP-68179` → `UP`). Tickets in an Epic must belong to the same project, so no further lookup is needed.
+- **Assignee** is hardcoded to the current user (`accountId` from `JiraService.getMyProfile`).
+- **Epic linkage** uses `fields.parent.key = epicKey` (Jira Cloud's modern Epic link). The old `customfield_10008` is not used.
+- **Story Points** uses the configured `settings.spField` (default `customfield_10014`); UI default is `0.5`.
+- **Priority** is sent as `fields.priority.name` (e.g. `"Medium"`).
+- **Fix versions** is a hardcoded two-option dropdown in the form, sourced from the Atlassian "recommend/fields" API response observed on `everfit.atlassian.net`:
+  - `12023` → `"To be confirmed"` (default)
+  - `10244` → `"N/A"`
+  These ids are environment-specific (Everfit's `UP` project). If the extension is ever used in another Jira tenant, the constants in `JiraTrackerPanel.jsx` (`FIX_VERSION_OPTIONS`) need updating. The worker just forwards the picked id into `fields.fixVersions: [{ id }]`.
+- **Description** is wrapped into ADF (`type: 'doc'` / `paragraph` / `text`) before being sent.
 
 ### Plan for Today JQL
 ```

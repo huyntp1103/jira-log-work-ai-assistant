@@ -31,11 +31,21 @@ Three-tab layout with shared header controls:
 - **Global toggles** below a thin divider:
   - **All assignees** — default off. When on, the worker drops `assignee = currentUser()` from the JQL.
   - **Hide other status** — default on. Client-side filter that hides the `Other` bucket (no re-fetch). `QA Success` lives in `Other` now, so this toggle hides QA-completed tickets along with anything else off the canonical list.
-- **Tracker header:** drag handle (6-dot grip), expand chevron + type badge (`EPIC` violet / `RELEASE` amber / `BOARD` cyan) — these together toggle expand. The tracker label is itself a link that opens it in Jira (board URL preserved when present); `done/total` count (counts raw `QA Success`); refresh icon (reloads tasks; only enabled when expanded); remove icon.
+- **Tracker header:** drag handle (6-dot grip), expand chevron + type badge (`EPIC` violet / `RELEASE` amber / `BOARD` cyan) — these together toggle expand. The tracker label is itself a link that opens it in Jira (board URL preserved when present); `done/total` count (counts raw `QA Success`); **"+ Add task" icon (Epic trackers only)**; refresh icon (reloads tasks; only enabled when expanded); remove icon.
 - **Board scope:** an expanded board tracker shows tasks from the board's **active sprint** (resolved via `/rest/agile/1.0/board/{id}/sprint?state=active`). If no active sprint exists, an inline error is shown.
 - **Reordering:** Drag the grip to reorder. Dragged card fades to 40% opacity; drop target shows a blue ring. Order persists to `chrome.storage.sync`.
 - **Expanded tracker:** Tasks are grouped by status in this fixed order — **QA Failed → To Do → In Progress → In Review → QA Ready → In Test → Other**. Each group has a colored pill header matching its status palette.
 - **Task row:** Single-line layout — Key + Title (2-line clamp before ellipsis) on the left, **clickable status pill** that opens a dropdown of available Jira workflow transitions, then SP on the right. Selecting a transition calls Jira's transitions API and reloads the tracker.
+- **Create task in Epic:** Clicking the `+` icon on an Epic tracker's header (also auto-expands the tracker if collapsed) opens an inline dashed-teal form scoped to that Epic:
+  - **Type:** `Task` (default) | `Bug`.
+  - **Priority:** `Highest` | `High` | `Medium` (default) | `Low` | `Lowest`.
+  - **Title:** required text input. The **Create** button is disabled until non-empty.
+  - **Description:** optional 2-row textarea.
+  - **Story Points:** number input with `step=0.5`, default `0.5`.
+  - **Fix versions:** dropdown with two hardcoded options — `"To be confirmed"` (default) and `"N/A"` (Everfit-tenant ids).
+  - Assignee is implicit (always the current user) and is not shown in the form.
+  - **Buttons:** `Cancel` (text) + `Create` (teal primary). During submit the button shows `Creating…` and both are disabled. On success the form closes and the tracker's task list refreshes so the new ticket appears in the relevant status group.
+  - Errors (validation or Jira API) appear inline above the buttons in red.
 
 ### GitHub Sync tab
 

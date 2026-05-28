@@ -85,6 +85,8 @@ Popup → Background: { type: 'JIRA_TRANSITIONS_LIST', key }
 Background → Popup: { type: 'JIRA_TRANSITIONS_DATA', transitions: [{ id, name, to: { name } }] }
 Popup → Background: { type: 'JIRA_TRANSITION_EXECUTE', key, transitionId }
 Background → Popup: { type: 'JIRA_TRANSITION_DONE' }
+Popup → Background: { type: 'JIRA_ISSUE_CREATE', epicKey, issueType, summary, description?, storyPoints?, priorityName?, fixVersionId? }
+Background → Popup: { type: 'JIRA_ISSUE_CREATED', id, key }
 Background → Popup: { type: 'JIRA_TRACKER_ERROR', error }
 ```
 
@@ -159,7 +161,23 @@ AND (
 - **Per-task status change:** the row's status pill is clickable. On open the popup queries Jira via `JIRA_TRANSITIONS_LIST` and shows available workflow transitions; picking one fires `JIRA_TRANSITION_EXECUTE` and reloads the tracker.
 - **Tracker header:** chevron + type badge toggle expand/collapse; the tracker label is itself a link to the tracker in Jira (board URL stored under `tracker.url` is honoured when present). A refresh icon next to the remove icon reloads tasks for the expanded tracker.
 
-### I. GitHub Sync — ID extraction priority
+### I. Create task inside an Epic
+
+- **Trigger:** "+ Add task" button on Epic trackers (Jira Tasks tab).
+- **Endpoint:** `POST /rest/api/3/issue` via `JiraService.createIssue`.
+- **Worker handler:** `handleJiraIssueCreate` (message type `JIRA_ISSUE_CREATE`).
+- **Project key** is derived from the Epic key by splitting on `-` (e.g. `UP-68179` → `UP`).
+- **Assignee** is the current user (`accountId` from `JiraService.getMyProfile`).
+- **Epic linkage** uses `fields.parent.key = epicKey` (Jira Cloud).
+- **Story Points** uses `settings.spField`; default value from the form is `0.5`.
+- **Fix versions** is a hardcoded two-option dropdown in the form, sourced from the Atlassian recommend-fields API response on `everfit.atlassian.net`:
+  - `12023` → `"To be confirmed"` (default)
+  - `10244` → `"N/A"`
+  These ids are tenant-specific (Everfit's `UP` project). Other tenants would need new ids in `FIX_VERSION_OPTIONS` (in `JiraTrackerPanel.jsx`).
+- **Description** is wrapped into ADF before sending.
+- After a successful create, the popup invalidates the tracker's task list and reloads it so the new ticket appears immediately.
+
+### J. GitHub Sync — ID extraction priority
 
 `GitHubService.extractTicketMap` is async and applies the following priority:
 
@@ -255,6 +273,9 @@ Report Date: {next working day after the picked date}
     }
   ],
   "jiraDomain": "company.atlassian.net",
+  // ↑ When unset, `StorageService.getJiraDomain` returns the hardcoded default
+  //   "everfit.atlassian.net". The content script `src/content/main.js` will
+  //   overwrite it on the next visit to any Jira tab.
   "jiraTrackers": [
     { "id": "27643",    "type": "version", "label": "Client Report (TBD)" },
     { "id": "UP-68179", "type": "epic",    "label": "Queue improvement (API)" },
