@@ -133,7 +133,7 @@ describe('JiraService', () => {
   });
 
   describe('searchJql', () => {
-    it('sends JQL as POST with maxResults 50', async () => {
+    it('sends JQL as POST with a page size and no token on the first request', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ issues: [] }),
@@ -144,7 +144,31 @@ describe('JiraService', () => {
       const callBody = JSON.parse(fetch.mock.calls[0][1].body);
       expect(callBody.jql).toBe('assignee = currentUser()');
       expect(callBody.fields).toEqual(['summary']);
-      expect(callBody.maxResults).toBe(50);
+      expect(callBody.maxResults).toBeGreaterThan(0);
+      expect(callBody.nextPageToken).toBeUndefined();
+    });
+
+    it('follows nextPageToken and concatenates issues across pages', async () => {
+      const responses = [
+        { issues: [{ key: 'UP-1' }, { key: 'UP-2' }], nextPageToken: 'tkn-1' },
+        { issues: [{ key: 'UP-3' }, { key: 'UP-4' }], nextPageToken: 'tkn-2' },
+        { issues: [{ key: 'UP-5' }] }, // last page — no nextPageToken
+      ];
+      const fetchMock = vi.fn().mockImplementation(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(responses.shift()),
+      }));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const result = await JiraService.searchJql('test.atlassian.net', 'project = UP', ['summary']);
+
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(result.issues.map((i) => i.key)).toEqual(['UP-1', 'UP-2', 'UP-3', 'UP-4', 'UP-5']);
+
+      const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+      const thirdBody = JSON.parse(fetchMock.mock.calls[2][1].body);
+      expect(secondBody.nextPageToken).toBe('tkn-1');
+      expect(thirdBody.nextPageToken).toBe('tkn-2');
     });
   });
 

@@ -126,12 +126,36 @@ export class JiraService {
     };
   }
 
-  static async searchJql(domain, jql, fields = []) {
-    return this.fetchJira(domain, '/rest/api/3/search/jql', 'POST', {
-      jql,
-      fields,
-      maxResults: 50,
-    });
+  /**
+   * Run a JQL search against the enhanced `/rest/api/3/search/jql` endpoint
+   * and follow `nextPageToken` until all pages have been collected.
+   *
+   * The endpoint is paginated and caps `maxResults` at 100 per request, so
+   * without this loop any tracker with > maxResults matching issues was being
+   * silently truncated.
+   *
+   * Returns the merged shape `{ issues: [...] }` (other top-level fields from
+   * the last page are preserved for forward-compat). A hard `maxPages` cap
+   * protects against runaway loops if the server keeps returning a token.
+   */
+  static async searchJql(domain, jql, fields = [], { pageSize = 100, maxPages = 20 } = {}) {
+    const allIssues = [];
+    let nextPageToken;
+    let lastPage = {};
+
+    for (let page = 0; page < maxPages; page++) {
+      const body = { jql, fields, maxResults: pageSize };
+      if (nextPageToken) body.nextPageToken = nextPageToken;
+
+      const data = await this.fetchJira(domain, '/rest/api/3/search/jql', 'POST', body);
+      lastPage = data;
+      if (Array.isArray(data.issues)) allIssues.push(...data.issues);
+
+      if (!data.nextPageToken) break;
+      nextPageToken = data.nextPageToken;
+    }
+
+    return { ...lastPage, issues: allIssues };
   }
 
   /**
