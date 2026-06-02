@@ -78,6 +78,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'JIRA_WORKLOG_MOVE') {
+    handleJiraWorklogMove(message)
+      .then((result) => sendResponse({ type: 'JIRA_WORKLOG_MOVED', ...result }))
+      .catch((error) => sendResponse({ type: 'JIRA_WORKLOG_ERROR', error: error.message }));
+    return true;
+  }
+
   if (message.type === 'JIRA_WORKLOG_CREATE') {
     handleJiraWorklogCreate(message)
       .then(() => sendResponse({ type: 'JIRA_WORKLOG_CREATED' }))
@@ -360,6 +367,54 @@ export async function handleJiraRecentTickets({ days = 7 } = {}) {
   const profile = await JiraService.getMyProfile(domain);
   const tickets = await JiraService.fetchRecentTickets(domain, profile.accountId, days);
   return { tickets };
+}
+
+/**
+ * Move a worklog from one Jira issue to another. Jira has no native "move"
+ * API, so this is create-then-delete:
+ *   1. Create a new worklog on the target ticket with the same time + comment.
+ *   2. Delete the original worklog from the source ticket.
+ *
+ * Order matters: if step 1 fails, the original is untouched. If step 2 fails
+ * after step 1 succeeded, the user sees both worklogs and can delete the old
+ * one manually — much safer than data loss from doing delete-first.
+ *
+ * `addToolPrefix` is forced to `false` so the existing comment text is sent
+ * through verbatim (the prefix, if any, is already part of `description`).
+ */
+export async function handleJiraWorklogMove({
+  fromKey,
+  worklogId,
+  toKey,
+  timeSpentSeconds,
+  description,
+  date,
+}) {
+  const domain = await StorageService.getJiraDomain();
+  if (!domain) throw new Error('Please open a Jira tab first.');
+  if (!fromKey || !worklogId) throw new Error('Missing source worklog.');
+  if (!toKey) throw new Error('Pick a target ticket.');
+  if (fromKey === toKey) throw new Error('Source and target tickets are the same.');
+  if (!timeSpentSeconds || timeSpentSeconds <= 0) throw new Error('Invalid time.');
+
+  const targetDate = date || DateHelper.formatDate(new Date());
+
+  await JiraService.createWorklog(domain, toKey, {
+    timeSpentSeconds,
+    targetDate,
+    description: description || '',
+    addToolPrefix: false,
+  });
+
+  try {
+    await JiraService.deleteWorklog(domain, fromKey, worklogId);
+  } catch (err) {
+    throw new Error(
+      `New worklog created on ${toKey}, but failed to delete the original on ${fromKey}: ${err.message}. Please remove it manually.`
+    );
+  }
+
+  return { toKey };
 }
 
 export async function handleJiraWorklogCreate({ issueKey, timeSpentSeconds, description, date }) {

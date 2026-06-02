@@ -263,6 +263,24 @@ export class JiraService {
   }
 
   /**
+   * Delete a worklog from a Jira issue. Jira returns 204 No Content on success,
+   * so this bypasses `fetchJira` (which assumes a JSON body).
+   */
+  static async deleteWorklog(domain, issueKey, worklogId) {
+    const res = await fetch(`https://${domain}/rest/api/3/issue/${issueKey}/worklog/${worklogId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'X-Atlassian-Token': 'no-check',
+      },
+    });
+    if (!res.ok) {
+      throw new Error(`Jira API error: ${res.status} ${res.statusText}`);
+    }
+  }
+
+  /**
    * Create a worklog on a Jira issue.
    *
    * @param {string} domain

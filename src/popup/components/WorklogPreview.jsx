@@ -1,6 +1,24 @@
 import { useEffect, useState } from 'react';
 import { fmtTime, parseTime } from '../../utils/time.js';
 
+// Default project key for bare-number inputs (e.g. "56789" → "UP-56789").
+// Mirrors `DEFAULT_PROJECT_KEY` in the background worker.
+const DEFAULT_PROJECT_KEY = 'UP';
+
+/**
+ * Resolve a user-typed ticket reference into a Jira issue key.
+ *  - Bare digits (e.g. "56789")      → "UP-56789"
+ *  - Full key (e.g. "UP-68179")      → uppercased, used as-is
+ *  - Anything else (incl. empty)     → "" (caller treats as no input)
+ */
+function resolveTicketInput(raw) {
+  const v = String(raw || '').trim();
+  if (!v) return '';
+  if (/^\d+$/.test(v)) return `${DEFAULT_PROJECT_KEY}-${v}`;
+  if (/^[A-Za-z]+-\d+$/.test(v)) return v.toUpperCase();
+  return '';
+}
+
 export default function WorklogPreview({ date, expanded = true, onToggle }) {
   const [rows, setRows] = useState(null);
   const [domain, setDomain] = useState('');
@@ -13,6 +31,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
   const [recentLoading, setRecentLoading] = useState(false);
   const [recentError, setRecentError] = useState('');
   const [newKey, setNewKey] = useState('');
+  const [newKeyTyped, setNewKeyTyped] = useState('');
   const [newTime, setNewTime] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [creating, setCreating] = useState(false);
@@ -37,6 +56,11 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
         commentDraft: r.comment,
         saveStatus: null,
         saveError: '',
+        moveOpen: false,
+        moveTargetKey: '',
+        moveTypedKey: '',
+        moveStatus: null,    // null | 'moving' | 'error'
+        moveError: '',
       }));
       setRows(initial);
       setDomain(res?.domain || '');
@@ -75,6 +99,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
   const closeAddForm = () => {
     setShowAddForm(false);
     setNewKey('');
+    setNewKeyTyped('');
     setNewTime('');
     setNewDescription('');
     setCreateError('');
@@ -82,8 +107,17 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
 
   const handleCreate = () => {
     const parsed = parseTime(newTime);
-    if (!newKey) {
-      setCreateError('Pick a ticket first.');
+    const typed = newKeyTyped.trim();
+    let issueKey = newKey;
+    if (typed) {
+      issueKey = resolveTicketInput(typed);
+      if (!issueKey) {
+        setCreateError('Type a valid ticket (e.g. 56789 or UP-56789).');
+        return;
+      }
+    }
+    if (!issueKey) {
+      setCreateError('Pick a ticket from the list or type a ticket key.');
       return;
     }
     if (parsed == null || parsed <= 0) {
@@ -95,7 +129,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
     chrome.runtime.sendMessage(
       {
         type: 'JIRA_WORKLOG_CREATE',
-        issueKey: newKey,
+        issueKey,
         timeSpentSeconds: parsed,
         description: newDescription,
         date,
@@ -111,6 +145,63 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
           return;
         }
         closeAddForm();
+        loadWorklogs();
+      }
+    );
+  };
+
+  const openMoveFor = (r) => {
+    if (recentTickets === null && !recentLoading) loadRecentTickets();
+    updateRowById(r.id, { moveOpen: true, moveTargetKey: '', moveTypedKey: '', moveStatus: null, moveError: '' });
+  };
+
+  const closeMoveFor = (r) => {
+    updateRowById(r.id, { moveOpen: false, moveTargetKey: '', moveTypedKey: '', moveStatus: null, moveError: '' });
+  };
+
+  const handleMove = (r) => {
+    const typed = (r.moveTypedKey || '').trim();
+    let target = r.moveTargetKey;
+    if (typed) {
+      target = resolveTicketInput(typed);
+      if (!target) {
+        updateRowById(r.id, { moveStatus: 'error', moveError: 'Type a valid ticket (e.g. 56789 or UP-56789).' });
+        return;
+      }
+    }
+    if (!target) {
+      updateRowById(r.id, { moveStatus: 'error', moveError: 'Pick a target ticket or type a key.' });
+      return;
+    }
+    if (target === r.key) {
+      updateRowById(r.id, { moveStatus: 'error', moveError: 'Target is the same as the source.' });
+      return;
+    }
+    // Use the latest edited values if the user typed but didn't save first.
+    const parsedTime = parseTime(r.timeStr);
+    const time = parsedTime != null && parsedTime > 0 ? parsedTime : r.timeSpentSeconds;
+    const desc = r.commentDraft;
+
+    updateRowById(r.id, { moveStatus: 'moving', moveError: '' });
+    chrome.runtime.sendMessage(
+      {
+        type: 'JIRA_WORKLOG_MOVE',
+        fromKey: r.key,
+        worklogId: r.id,
+        toKey: target,
+        timeSpentSeconds: time,
+        description: desc,
+        date,
+      },
+      (res) => {
+        if (chrome.runtime.lastError) {
+          updateRowById(r.id, { moveStatus: 'error', moveError: chrome.runtime.lastError.message });
+          return;
+        }
+        if (res?.type === 'JIRA_WORKLOG_ERROR') {
+          updateRowById(r.id, { moveStatus: 'error', moveError: res.error });
+          return;
+        }
         loadWorklogs();
       }
     );
@@ -244,6 +335,19 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
                       className="w-14 px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-center font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                     <button
+                      onClick={() => (r.moveOpen ? closeMoveFor(r) : openMoveFor(r))}
+                      disabled={saving || r.moveStatus === 'moving'}
+                      className={`p-1 transition-colors ${
+                        r.moveOpen ? 'text-indigo-600' : 'text-slate-300 hover:text-indigo-600'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      aria-label="Move worklog to another ticket"
+                      title="Move to another ticket"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                        <path fillRule="evenodd" d="M2 10a.75.75 0 0 1 .75-.75h12.59l-2.1-1.95a.75.75 0 1 1 1.02-1.1l3.5 3.25a.75.75 0 0 1 0 1.1l-3.5 3.25a.75.75 0 1 1-1.02-1.1l2.1-1.95H2.75A.75.75 0 0 1 2 10Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    <button
                       onClick={() => handleSave(r)}
                       disabled={!dirty || saving}
                       className={`p-1 transition-colors ${
@@ -279,6 +383,60 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
                   rows={2}
                   className="w-full px-2 py-1.5 rounded border border-slate-200 bg-slate-50 text-[12px] text-slate-600 leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white"
                 />
+
+                {r.moveOpen && (
+                  <div className="rounded-md border border-dashed border-indigo-300 bg-indigo-50/40 p-2 space-y-1.5">
+                    <div className="text-[11px] font-semibold text-indigo-700">Move to ticket</div>
+                    {recentLoading ? (
+                      <div className="h-7 rounded bg-slate-200 animate-pulse" />
+                    ) : recentError ? (
+                      <div className="text-[11px] text-red-600">{recentError}</div>
+                    ) : (
+                      <select
+                        value={r.moveTargetKey}
+                        onChange={(e) => updateRowById(r.id, { moveTargetKey: e.target.value, moveTypedKey: '', moveStatus: null, moveError: '' })}
+                        className="w-full px-2 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="">— Select a ticket —</option>
+                        {(recentTickets || [])
+                          .filter((t) => t.key !== r.key)
+                          .map((t) => (
+                            <option key={t.key} value={t.key}>
+                              {t.key}: {t.summary}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+                    <input
+                      type="text"
+                      value={r.moveTypedKey}
+                      onChange={(e) => updateRowById(r.id, { moveTypedKey: e.target.value, moveTargetKey: '', moveStatus: null, moveError: '' })}
+                      placeholder="…or type a ticket (e.g. 56789, UP-56789)"
+                      className="w-full px-2 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    {r.moveStatus === 'error' && (
+                      <div className="text-[11px] text-red-600">{r.moveError}</div>
+                    )}
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => closeMoveFor(r)}
+                        disabled={r.moveStatus === 'moving'}
+                        className="px-2 py-1 rounded text-[11px] text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMove(r)}
+                        disabled={(!r.moveTargetKey && !(r.moveTypedKey || '').trim()) || r.moveStatus === 'moving'}
+                        className="px-2.5 py-1 rounded text-[11px] font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                      >
+                        {r.moveStatus === 'moving' ? 'Moving…' : 'Move'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {r.saveStatus === 'error' && (
                   <div className="text-[11px] text-red-600 text-right">{r.saveError || 'Save failed'}</div>
@@ -324,7 +482,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
             ) : (
               <select
                 value={newKey}
-                onChange={(e) => { setNewKey(e.target.value); setCreateError(''); }}
+                onChange={(e) => { setNewKey(e.target.value); setNewKeyTyped(''); setCreateError(''); }}
                 className="w-full px-2 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">— Select a ticket —</option>
@@ -335,6 +493,13 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
                 ))}
               </select>
             )}
+            <input
+              type="text"
+              value={newKeyTyped}
+              onChange={(e) => { setNewKeyTyped(e.target.value); setNewKey(''); setCreateError(''); }}
+              placeholder="…or type a ticket (e.g. 56789, UP-56789)"
+              className="w-full px-2 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
           </div>
 
           <div className="flex items-center gap-2">
@@ -363,7 +528,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
           <button
             type="button"
             onClick={handleCreate}
-            disabled={creating || !newKey || !newTime.trim()}
+            disabled={creating || (!newKey && !newKeyTyped.trim()) || !newTime.trim()}
             className="w-full py-1.5 rounded text-[12px] font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
           >
             {creating ? (
