@@ -410,6 +410,32 @@ describe('GitHubService.fetchEventsForDate', () => {
     ).rejects.toThrow('Invalid GitHub token');
   });
 
+  it('paginates until the page is older than the target date', async () => {
+    // Page 1: 100 events all dated 2026-04-10 (today, the next page after target)
+    const page1 = Array.from({ length: 100 }, (_, i) => ({
+      created_at: '2026-04-10T01:00:00Z',
+      repo: { name: 'Org/repo' },
+      idx: `p1-${i}`,
+    }));
+    // Page 2: the target-date approval is here, plus older events
+    const page2 = [
+      { created_at: '2026-04-09T10:00:00Z', repo: { name: 'Org/repo' }, idx: 'target' },
+      { created_at: '2026-04-08T10:00:00Z', repo: { name: 'Org/repo' }, idx: 'older' },
+    ];
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(page1) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(page2) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await GitHubService.fetchEventsForDate('user', '2026-04-09', 'token');
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain('page=1');
+    expect(fetchMock.mock.calls[1][0]).toContain('page=2');
+    expect(result.map((e) => e.idx)).toEqual(['target']);
+  });
+
   it('throws generic error on other status codes', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,

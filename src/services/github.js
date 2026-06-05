@@ -19,33 +19,60 @@ function extractIds(str) {
 export class GitHubService {
   /**
    * Fetch GitHub events for a user on a specific date (GMT+7).
+   *
+   * Walks the `/users/{username}/events` feed page-by-page (newest-first) and
+   * returns events whose `created_at` lands on `targetDate` after GMT+7
+   * conversion. Stops early once the oldest event on a page is older than
+   * `targetDate` (every subsequent page is older too).
+   *
+   * GitHub's events feed is capped at 10 pages of 100 events = 1000 events
+   * total, ~90 days of history; older activity is not retrievable here.
+   *
    * @param {string} username
    * @param {string} targetDate - YYYY-MM-DD in GMT+7
    * @param {string} token - GitHub PAT
-   * @returns {Promise<object[]>} filtered events, newest-first (as returned by GitHub)
+   * @returns {Promise<object[]>} filtered events, newest-first
    */
   static async fetchEventsForDate(username, targetDate, token, allowedRepos = []) {
-    const res = await fetch(
-      `https://api.github.com/users/${username}/events?per_page=100`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github+json',
-        },
+    const PER_PAGE = 100;
+    const MAX_PAGES = 10; // GitHub's hard cap on the events feed
+    const matches = [];
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const res = await fetch(
+        `https://api.github.com/users/${username}/events?per_page=${PER_PAGE}&page=${page}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github+json',
+          },
+        }
+      );
+      if (!res.ok) {
+        const msg = res.status === 401
+          ? 'Invalid GitHub token. Please check your PAT in Settings.'
+          : `GitHub API error: ${res.status} ${res.statusText}`;
+        throw new Error(msg);
       }
-    );
-    if (!res.ok) {
-      const msg = res.status === 401
-        ? 'Invalid GitHub token. Please check your PAT in Settings.'
-        : `GitHub API error: ${res.status} ${res.statusText}`;
-      throw new Error(msg);
+      const events = await res.json();
+      if (!Array.isArray(events) || events.length === 0) break;
+
+      for (const e of events) {
+        const isCorrectDate = toGmt7DateStr(e.created_at) === targetDate;
+        const isAllowedRepo = allowedRepos.length === 0 || allowedRepos.includes(e.repo?.name);
+        if (isCorrectDate && isAllowedRepo) matches.push(e);
+      }
+
+      // Stop when the page's oldest event is already strictly older than the
+      // target date — the rest of the feed only gets older.
+      const oldest = events[events.length - 1];
+      if (oldest && toGmt7DateStr(oldest.created_at) < targetDate) break;
+
+      // Short page = last page in the feed.
+      if (events.length < PER_PAGE) break;
     }
-    const events = await res.json();
-    return events.filter((e) => {
-      const isCorrectDate = toGmt7DateStr(e.created_at) === targetDate;
-      const isAllowedRepo = allowedRepos.length === 0 || allowedRepos.includes(e.repo.name);
-      return isCorrectDate && isAllowedRepo;
-    });
+
+    return matches;
   }
 
   /**

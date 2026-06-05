@@ -477,10 +477,38 @@ export async function handleGitHubSyncPreview({ date }) {
     JiraService.getMyProfile(domain),
   ]);
 
+  // ─── DIAGNOSTIC: events overview ───────────────────────────────────────────
+  const typeCounts = events.reduce((acc, e) => {
+    acc[e.type] = (acc[e.type] || 0) + 1;
+    return acc;
+  }, {});
+  console.log('[BG][gh-sync] events fetched:', events.length, 'by type:', typeCounts);
+  // Surface PR-review-style events specifically so it's obvious whether the
+  // approval event made it past the GitHub feed + allowedRepos filter.
+  const prEvents = events.filter((e) =>
+    e.type === 'PullRequestEvent'
+    || e.type === 'PullRequestReviewEvent'
+    || e.type === 'PullRequestReviewCommentEvent'
+  );
+  console.log('[BG][gh-sync] PR-related events:', prEvents.map((e) => ({
+    type: e.type,
+    repo: e.repo?.name,
+    action: e.payload?.action,
+    reviewState: e.payload?.review?.state,
+    prNumber: e.payload?.pull_request?.number,
+    prTitle: e.payload?.pull_request?.title,
+    branch: e.payload?.pull_request?.head?.ref,
+    created_at: e.created_at,
+  })));
+
   // Oldest-first so first-occurrence logic picks the earliest action
   const ticketMap = await GitHubService.extractTicketMap([...events].reverse(), timeConfig, githubToken);
+  console.log('[BG][gh-sync] ticketMap after extraction:', [...ticketMap.entries()].map(
+    ([k, v]) => ({ key: k, seconds: v.seconds, description: v.description })
+  ));
 
   if (ticketMap.size === 0) {
+    console.log('[BG][gh-sync] no tickets extracted — nothing to suggest.');
     return { rows: [] };
   }
 
@@ -489,6 +517,10 @@ export async function handleGitHubSyncPreview({ date }) {
   const syncedFlags = await Promise.all(
     keys.map((key) => GitHubService.isSynced(domain, key, targetDate, profile.accountId))
   );
+  const droppedAsSynced = keys.filter((_, i) => syncedFlags[i]);
+  if (droppedAsSynced.length) {
+    console.log('[BG][gh-sync] dropped (already synced with tool prefix):', droppedAsSynced);
+  }
 
   const unsyncedKeys = keys.filter((_, i) => !syncedFlags[i]);
 
