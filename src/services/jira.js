@@ -352,7 +352,13 @@ export class JiraService {
     if (opts.priorityName) fields.priority = { name: opts.priorityName };
     if (opts.assigneeAccountId) fields.assignee = { accountId: opts.assigneeAccountId };
     if (opts.parentKey) fields.parent = { key: opts.parentKey };
-    if (opts.storyPoints != null && opts.spField) fields[opts.spField] = opts.storyPoints;
+    // Default the SP field to `customfield_10014` so an empty `settings.spField`
+    // doesn't silently drop story points. Coerce the value to a Number — some
+    // Jira tenants reject a stringified value on number-type custom fields.
+    if (opts.storyPoints != null) {
+      const spField = opts.spField || 'customfield_10014';
+      fields[spField] = Number(opts.storyPoints);
+    }
     if (opts.fixVersionIds?.length) fields.fixVersions = opts.fixVersionIds.map((id) => ({ id }));
 
     return this.fetchJira(domain, '/rest/api/3/issue', 'POST', { fields });

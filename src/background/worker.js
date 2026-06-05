@@ -345,7 +345,7 @@ export async function handleJiraIssueCreate({
 
   const fixVersionIds = fixVersionId ? [String(fixVersionId)] : [];
 
-  const created = await JiraService.createIssue(domain, {
+  const createPayload = {
     projectKey,
     summary: summary.trim(),
     description,
@@ -356,7 +356,11 @@ export async function handleJiraIssueCreate({
     storyPoints,
     spField: settings.spField,
     fixVersionIds,
-  });
+  };
+  console.log('[BG] handleJiraIssueCreate payload:', createPayload);
+
+  const created = await JiraService.createIssue(domain, createPayload);
+  console.log('[BG] handleJiraIssueCreate response:', created);
 
   return { key: created.key, id: created.id };
 }
