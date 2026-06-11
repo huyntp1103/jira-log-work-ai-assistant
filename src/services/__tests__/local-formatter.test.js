@@ -162,7 +162,7 @@ describe('LocalFormatter.formatReport', () => {
     });
     const out = LocalFormatter.formatReport(report, baseContext);
     expect(out).toContain(
-      'AI: Scan current code to understand business logic, investigate issue, write code to fix issue and fix data if necessary.'
+      'AI: Scan current code to understand business logic, investigate issue, write code to fix issue and fix data if necessary'
     );
   });
 

@@ -87,7 +87,7 @@ AI usage examples: "Write solution design & implementation plan", "Generate code
  */
 export const PLATFORM_AI_USAGE = {
   Backend: {
-    Bug:  'Scan current code to understand business logic, investigate issue, write code to fix issue and fix data if necessary.',
+    Bug:  'Scan current code to understand business logic, investigate issue, write code to fix issue and fix data if necessary',
     Task: 'Write solution design & implementation plan, generate code, generate tests',
     default: 'Write solution design & implementation plan, generate code, generate tests',
   },

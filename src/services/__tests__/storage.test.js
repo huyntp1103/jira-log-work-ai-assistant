@@ -79,7 +79,7 @@ describe('buildInstruction', () => {
 describe('getAiUsage', () => {
   it('returns the Bug-specific line for Backend + Bug', () => {
     expect(getAiUsage('Backend', 'Bug')).toBe(
-      'Scan current code to understand business logic, investigate issue, write code to fix issue and fix data if necessary.'
+      'Scan current code to understand business logic, investigate issue, write code to fix issue and fix data if necessary'
     );
   });
 
