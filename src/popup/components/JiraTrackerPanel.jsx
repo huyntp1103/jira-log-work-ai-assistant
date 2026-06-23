@@ -167,6 +167,19 @@ const STATUS_ORDER = [
   'In Test',
 ];
 
+// Destination statuses the user is allowed to move a ticket TO via the status
+// pill dropdown. Display of the actual current status is NOT restricted — the
+// pill always shows whatever Jira returns. Match is case-insensitive on the
+// transition's `to.name`.
+const ALLOWED_TRANSITION_DESTINATIONS = new Set([
+  'to do',
+  'in progress',
+  'in review',
+  'qa ready',
+  'pending',
+  'q&a',
+]);
+
 // Tailwind classes per status (group header and per-row pill share the same palette).
 const STATUS_STYLES = {
   'QA Failed':   { pill: 'bg-red-100 text-red-700',         header: 'text-red-700' },
@@ -684,19 +697,24 @@ function TaskRow({ row, domain, pillClass, onTransitioned }) {
             {error && (
               <div className="px-2 py-1 text-[11px] text-red-600 max-w-[220px]">{error}</div>
             )}
-            {!loadingTransitions && !error && transitions && transitions.length === 0 && (
-              <div className="px-2 py-1 text-[11px] text-slate-400">No transitions available.</div>
-            )}
-            {!loadingTransitions && !error && transitions && transitions.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => apply(t.id)}
-                className="w-full text-left px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
-              >
-                {t.name}
-              </button>
-            ))}
+            {!loadingTransitions && !error && transitions && (() => {
+              const allowed = transitions.filter((t) =>
+                ALLOWED_TRANSITION_DESTINATIONS.has((t.to?.name || '').trim().toLowerCase())
+              );
+              if (allowed.length === 0) {
+                return <div className="px-2 py-1 text-[11px] text-slate-400">No transitions available.</div>;
+              }
+              return allowed.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => apply(t.id)}
+                  className="w-full text-left px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100"
+                >
+                  {t.name}
+                </button>
+              ));
+            })()}
           </div>
         )}
       </div>
