@@ -1,4 +1,4 @@
-# Daily Report AI Assistant (Browser Extension)
+# Everfit Task Tracking (Browser Extension)
 
 ## Project Vision
 A "frictionless" Chrome Extension that automates daily reporting and Jira admin work for engineering teams.

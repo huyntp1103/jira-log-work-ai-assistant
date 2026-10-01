@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Daily Report AI Assistant",
+  "name": "Everfit Task Tracking",
   "version": "1.0.0",
   "description": "AI-powered daily report generator from Jira worklogs",
   "permissions": ["storage", "activeTab", "sidePanel"],
@@ -9,7 +9,7 @@
     "https://generativelanguage.googleapis.com/*"
   ],
   "action": {
-    "default_title": "Open Jira Report Assistant",
+    "default_title": "Open Everfit Task Tracking",
     "default_icon": {
       "16": "public/icons/icon16.png",
       "32": "public/icons/icon32.png",

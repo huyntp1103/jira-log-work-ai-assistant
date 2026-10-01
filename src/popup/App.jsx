@@ -106,7 +106,7 @@ export default function App() {
       {/* Header */}
       <div className="bg-slate-900 px-5 py-3.5 flex items-center justify-between">
         <div>
-          <h1 className="text-white text-sm font-semibold">Daily Report AI Assistant</h1>
+          <h1 className="text-white text-sm font-semibold">Everfit Task Tracking</h1>
           {/* <p className="text-blue-100 text-[11px] mt-0.5">AI-powered daily reports</p> */}
         </div>
         <button
