@@ -1,0 +1,26 @@
+.claude/CLAUDE.md
+  s_7f087eaf97aef9::t_3e4662f7d1ea90 1
+manifest.json
+  s_7f087eaf97aef9::t_620b4ec70f920a 12
+  s_7f087eaf97aef9::t_3e4662f7d1ea90 3
+src/popup/App.jsx
+  s_7f087eaf97aef9::t_3e4662f7d1ea90 109
+src/popup/index.html
+  s_7f087eaf97aef9::t_620b4ec70f920a 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5a611ff9ef35d0e25be97f3938ee9d52ae5c40d1",
+  "prompts": {},
+  "sessions": {
+    "s_7f087eaf97aef9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bbacfcb5-8b13-44d3-8fcf-7ea7678e7870",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Huy Nguyen Nhat <huyntp1103@gmail.com>"
+    }
+  }
+}
