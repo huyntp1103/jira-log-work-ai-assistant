@@ -41,7 +41,7 @@ export class ReportEngine {
       ),
       JiraService.searchJql(
         this.domain,
-        `assignee = currentUser() AND sprint in openSprints() AND (status = "In Progress" OR (status = "QA FAILED" AND created >= "${twoWeeksAgoStr}"))`,
+        `assignee = currentUser() AND sprint != NULL AND status = "In Progress"`,
         fields
       ),
     ]);
