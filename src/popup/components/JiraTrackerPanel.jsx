@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { StorageService } from '../../services/storage.js';
+import { fmtTime } from '../../utils/time.js';
 
 export default function JiraTrackerPanel() {
   const [trackers, setTrackers] = useState([]);
@@ -720,6 +721,9 @@ function TaskRow({ row, domain, pillClass, onTransitioned }) {
       </div>
       <span className="shrink-0 text-[10px] text-slate-400 w-12 text-right">
         SP: {row.sp || '—'}
+      </span>
+      <span className="shrink-0 text-[10px] text-slate-400 w-14 text-right" title="Time logged on this ticket">
+        {row.spentSeconds ? fmtTime(row.spentSeconds) : '—'}
       </span>
     </li>
   );

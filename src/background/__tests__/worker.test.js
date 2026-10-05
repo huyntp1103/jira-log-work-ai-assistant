@@ -22,6 +22,7 @@ vi.mock('../../services/jira.js', () => ({
   JiraService: {
     getMyProfile: vi.fn(),
     fetchJira: vi.fn(),
+    searchJql: vi.fn(),
   },
 }));
 
@@ -43,7 +44,7 @@ vi.mock('../../services/github.js', () => ({
   },
 }));
 
-import { handleGenerateReport, handleGitHubSyncPreview } from '../worker.js';
+import { handleGenerateReport, handleGitHubSyncPreview, handleJiraTrackerTasks } from '../worker.js';
 import { StorageService } from '../../services/storage.js';
 import { JiraService } from '../../services/jira.js';
 import { GeminiService } from '../../services/gemini.js';
@@ -191,5 +192,20 @@ describe('handleGenerateReport — reportEngine setting switch', () => {
 
     await expect(handleGenerateReport({ date: '2026-04-08' }))
       .rejects.toThrow('Please enter your Gemini API key');
+  });
+});
+
+describe('handleJiraTrackerTasks — logged time', () => {
+  it('requests timespent and maps it to spentSeconds', async () => {
+    StorageService.getJiraDomain.mockResolvedValue('x.atlassian.net');
+    JiraService.searchJql.mockResolvedValue({
+      issues: [
+        { key: 'UP-1', fields: { summary: 'A', status: { name: 'To Do' }, timespent: 5400, story_points: 1 } },
+        { key: 'UP-2', fields: { summary: 'B', status: { name: 'To Do' }, timespent: null } },
+      ],
+    });
+    const { rows } = await handleJiraTrackerTasks({ tracker: { type: 'epic', id: 'UP-9' } });
+    expect(JiraService.searchJql.mock.calls[0][2]).toContain('timespent');
+    expect(rows.map((r) => r.spentSeconds)).toEqual([5400, 0]);
   });
 });

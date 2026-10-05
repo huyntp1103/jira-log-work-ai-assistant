@@ -265,7 +265,7 @@ export async function handleJiraTrackerDetect({ input }) {
 
 /**
  * Fetch the current user's tasks under a tracker.
- * Returns rows with key, summary, status, sp, progress (%, integer).
+ * Returns rows with key, summary, status, sp, spentSeconds (total time logged on the ticket).
  */
 export async function handleJiraTrackerTasks({ tracker, allAssignees = false }) {
   const settings = await StorageService.getSettings();
@@ -288,7 +288,7 @@ export async function handleJiraTrackerTasks({ tracker, allAssignees = false }) 
   const data = await JiraService.searchJql(
     domain,
     jql,
-    ['summary', 'status', settings.spField]
+    ['summary', 'status', 'timespent', settings.spField]
   );
 
   const rows = (data.issues || []).map((issue) => ({
@@ -296,6 +296,7 @@ export async function handleJiraTrackerTasks({ tracker, allAssignees = false }) 
     summary: issue.fields.summary || '',
     status: issue.fields.status?.name || '',
     sp: issue.fields[settings.spField] || 0,
+    spentSeconds: issue.fields.timespent || 0,
   }));
 
   return { rows, domain };
