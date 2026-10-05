@@ -1,0 +1,25 @@
+src/background/__tests__/worker.test.js
+  s_7f087eaf97aef9::t_e66920101050d9 25,47,197-209
+  s_7f087eaf97aef9::t_1d9f30a5703710 210-211
+src/background/worker.js
+  s_7f087eaf97aef9::t_e66920101050d9 268,291,299
+src/popup/components/JiraTrackerPanel.jsx
+  s_7f087eaf97aef9::t_e66920101050d9 3,725-726
+  s_7f087eaf97aef9::t_a3f450190f7e94 727
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "49107373131bcebc51180727145bb23bf4e66f56",
+  "prompts": {},
+  "sessions": {
+    "s_7f087eaf97aef9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bbacfcb5-8b13-44d3-8fcf-7ea7678e7870",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Huy Nguyen Nhat <huyntp1103@gmail.com>"
+    }
+  }
+}
