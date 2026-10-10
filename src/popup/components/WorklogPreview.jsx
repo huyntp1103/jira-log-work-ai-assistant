@@ -1,27 +1,12 @@
 import { useEffect, useState } from 'react';
 import { fmtTime, parseTime } from '../../utils/time.js';
-
-// Default project key for bare-number inputs (e.g. "56789" → "UP-56789").
-// Mirrors `DEFAULT_PROJECT_KEY` in the background worker.
-const DEFAULT_PROJECT_KEY = 'UP';
-
-/**
- * Resolve a user-typed ticket reference into a Jira issue key.
- *  - Bare digits (e.g. "56789")      → "UP-56789"
- *  - Full key (e.g. "UP-68179")      → uppercased, used as-is
- *  - Anything else (incl. empty)     → "" (caller treats as no input)
- */
-function resolveTicketInput(raw) {
-  const v = String(raw || '').trim();
-  if (!v) return '';
-  if (/^\d+$/.test(v)) return `${DEFAULT_PROJECT_KEY}-${v}`;
-  if (/^[A-Za-z]+-\d+$/.test(v)) return v.toUpperCase();
-  return '';
-}
+import { getProduct, resolveTicketKey } from '../../utils/product.js';
+import { StorageService } from '../../services/storage.js';
 
 export default function WorklogPreview({ date, expanded = true, onToggle }) {
   const [rows, setRows] = useState(null);
   const [domain, setDomain] = useState('');
+  const [product, setProduct] = useState('core');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,6 +21,12 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
   const [newDescription, setNewDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+
+  useEffect(() => {
+    StorageService.getSettings().then((st) => setProduct(st.product));
+  }, []);
+
+  const projectKey = getProduct(product).projectKey;
 
   const loadWorklogs = () => {
     setLoading(true);
@@ -110,9 +101,9 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
     const typed = newKeyTyped.trim();
     let issueKey = newKey;
     if (typed) {
-      issueKey = resolveTicketInput(typed);
+      issueKey = resolveTicketKey(typed, product);
       if (!issueKey) {
-        setCreateError('Type a valid ticket (e.g. 56789 or UP-56789).');
+        setCreateError(`Type a valid ticket (e.g. 56789 or ${projectKey}-56789).`);
         return;
       }
     }
@@ -163,9 +154,9 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
     const typed = (r.moveTypedKey || '').trim();
     let target = r.moveTargetKey;
     if (typed) {
-      target = resolveTicketInput(typed);
+      target = resolveTicketKey(typed, product);
       if (!target) {
-        updateRowById(r.id, { moveStatus: 'error', moveError: 'Type a valid ticket (e.g. 56789 or UP-56789).' });
+        updateRowById(r.id, { moveStatus: 'error', moveError: `Type a valid ticket (e.g. 56789 or ${projectKey}-56789).` });
         return;
       }
     }
@@ -411,7 +402,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
                       type="text"
                       value={r.moveTypedKey}
                       onChange={(e) => updateRowById(r.id, { moveTypedKey: e.target.value, moveTargetKey: '', moveStatus: null, moveError: '' })}
-                      placeholder="…or type a ticket (e.g. 56789, UP-56789)"
+                      placeholder={`…or type a ticket (e.g. 56789, ${projectKey}-56789)`}
                       className="w-full px-2 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                     {r.moveStatus === 'error' && (
@@ -497,7 +488,7 @@ export default function WorklogPreview({ date, expanded = true, onToggle }) {
               type="text"
               value={newKeyTyped}
               onChange={(e) => { setNewKeyTyped(e.target.value); setNewKey(''); setCreateError(''); }}
-              placeholder="…or type a ticket (e.g. 56789, UP-56789)"
+              placeholder={`…or type a ticket (e.g. 56789, ${projectKey}-56789)`}
               className="w-full px-2 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>

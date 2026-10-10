@@ -5,6 +5,7 @@ import { LocalFormatter } from '../services/local-formatter.js';
 import { ReportEngine } from '../services/report-engine.js';
 import { GitHubService } from '../services/github.js';
 import { DateHelper } from '../utils/date.js';
+import { getProduct } from '../utils/product.js';
 
 console.log('[BG] Service worker started');
 
@@ -156,6 +157,7 @@ export async function handleGenerateReport({ date, templateId }) {
     baseDate,
     spField: settings.spField,
     hoursPerPoint: settings.hoursPerPoint,
+    projectKey: getProduct(settings.product).projectKey,
   });
   const report = await engine.generate();
   console.log('[BG] Report data:', JSON.stringify(report).substring(0, 200));
@@ -171,6 +173,8 @@ export async function handleGenerateReport({ date, templateId }) {
       displayName: profile.displayName,
       platform,
       targetDate: reportDate,
+      templateId: template.id,
+      hoursPerPoint: settings.hoursPerPoint,
     });
   } else {
     console.log('[BG] Step 3: Sending to Gemini...');
@@ -186,22 +190,23 @@ export async function handleGenerateReport({ date, templateId }) {
   return { report, formattedText };
 }
 
-const DEFAULT_PROJECT_KEY = 'UP';
 
 /**
  * Detect whether a user-entered identifier refers to a Jira release (version)
  * or an Epic issue. Accepts:
- *   - a bare numeric id ("27643") — tries /version/{id} and /issue/UP-{id}
- *   - a full issue key ("UP-68179") — verified as an Epic via /issue/{key}
+ *   - a bare numeric id ("27643") — tries /version/{id} and /issue/{projectKey}-{id}
+ *   - a full issue key ("<KEY>-68179") — verified as an Epic via /issue/{key}
  */
 export async function handleJiraTrackerDetect({ input }) {
+  const settings = await StorageService.getSettings();
+  const projectKey = getProduct(settings.product).projectKey;
   const domain = await StorageService.getJiraDomain();
   if (!domain) throw new Error('Please open a Jira tab first so the extension can detect your domain.');
 
   const original = String(input || '').trim();
   if (!original) throw new Error('Please enter a release number, epic key, or board URL.');
 
-  // Board URL — e.g. https://<domain>/jira/software/c/projects/UP/boards/26?...
+  // Board URL — e.g. https://<domain>/jira/software/c/projects/<KEY>/boards/26?...
   const boardMatch = original.match(/\/boards\/(\d+)/);
   if (boardMatch) {
     const boardId = boardMatch[1];
@@ -212,6 +217,7 @@ export async function handleJiraTrackerDetect({ input }) {
         id: boardId,
         type: 'board',
         label: board.name || `Board ${boardId}`,
+        projectKey: board.location?.projectKey || original.match(/\/projects\/([A-Za-z0-9]+)\//)?.[1]?.toUpperCase() || projectKey,
         url: original,
       },
     };
@@ -227,6 +233,7 @@ export async function handleJiraTrackerDetect({ input }) {
       tracker: {
         id: raw,
         type: 'epic',
+        projectKey: raw.split('-')[0],
         label: issue.fields.summary,
       },
     };
@@ -234,7 +241,7 @@ export async function handleJiraTrackerDetect({ input }) {
 
   // Bare numeric form — try version and issue in parallel
   if (/^\d+$/.test(raw)) {
-    const epicKey = `${DEFAULT_PROJECT_KEY}-${raw}`;
+    const epicKey = `${projectKey}-${raw}`;
     const [version, issue] = await Promise.all([
       JiraService.getVersion(domain, raw),
       JiraService.getIssue(domain, epicKey, 'Epic'),
@@ -244,6 +251,7 @@ export async function handleJiraTrackerDetect({ input }) {
         tracker: {
           id: epicKey,
           type: 'epic',
+          projectKey,
           label: issue.fields.summary,
         },
       };
@@ -253,6 +261,7 @@ export async function handleJiraTrackerDetect({ input }) {
         tracker: {
           id: raw,
           type: 'version',
+          projectKey,
           label: version.name || `Release ${raw}`,
         },
       };
@@ -260,7 +269,7 @@ export async function handleJiraTrackerDetect({ input }) {
     throw new Error(`Could not find a release or epic for "${raw}".`);
   }
 
-  throw new Error(`"${raw}" is not a valid id. Use a number (e.g. 27643) or a key (e.g. UP-68179).`);
+  throw new Error(`"${raw}" is not a valid id. Use a number (e.g. 27643) or a key (e.g. ${projectKey}-68179).`);
 }
 
 /**
@@ -507,6 +516,13 @@ export async function handleGitHubSyncPreview({ date }) {
   console.log('[BG][gh-sync] ticketMap after extraction:', [...ticketMap.entries()].map(
     ([k, v]) => ({ key: k, seconds: v.seconds, description: v.description })
   ));
+
+  // Only keep tickets from the selected product's Jira project, so a stray
+  // reference to the other product (e.g. UP-123 while on Marketplace) is not logged.
+  const projectPrefix = `${getProduct(settings.product).projectKey}-`;
+  for (const key of [...ticketMap.keys()]) {
+    if (!key.startsWith(projectPrefix)) ticketMap.delete(key);
+  }
 
   if (ticketMap.size === 0) {
     console.log('[BG][gh-sync] no tickets extracted — nothing to suggest.');

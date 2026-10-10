@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { buildInstruction, getAiUsage, DEFAULT_AI_USAGE } from '../storage.js';
+import { describe, it, expect, vi } from 'vitest';
+import { buildInstruction, getAiUsage, DEFAULT_AI_USAGE, StorageService, MARKETPLACE_TEMPLATE_ID } from '../storage.js';
 
 describe('buildInstruction', () => {
   it('includes the provided format template', () => {
@@ -102,5 +102,22 @@ describe('getAiUsage', () => {
 
   it('falls back to DEFAULT_AI_USAGE for an unknown platform', () => {
     expect(getAiUsage('Marketing', 'Bug')).toBe(DEFAULT_AI_USAGE);
+  });
+});
+
+describe('StorageService.getTemplates', () => {
+  it('returns both built-in templates when nothing is stored', async () => {
+    globalThis.chrome = { storage: { sync: { get: vi.fn().mockResolvedValue({}) } } };
+    const t = await StorageService.getTemplates();
+    expect(t.map((x) => x.id)).toContain(MARKETPLACE_TEMPLATE_ID);
+    expect(t.find((x) => x.isDefault).id).toBe('default-backend-core');
+  });
+
+  it('appends the Marketplace template to an older saved list without touching it', async () => {
+    const saved = [{ id: 'default-backend-core', name: 'Mine', format: 'x', isDefault: true }];
+    globalThis.chrome = { storage: { sync: { get: vi.fn().mockResolvedValue({ templates: saved }) } } };
+    const t = await StorageService.getTemplates();
+    expect(t[0]).toEqual(saved[0]);
+    expect(t.map((x) => x.id)).toEqual(['default-backend-core', MARKETPLACE_TEMPLATE_ID]);
   });
 });

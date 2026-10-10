@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { StorageService } from '../../services/storage.js';
 import { fmtTime } from '../../utils/time.js';
+import { getProduct, getProductByProjectKey, DEFAULT_PRODUCT } from '../../utils/product.js';
 
 export default function JiraTrackerPanel() {
   const [trackers, setTrackers] = useState([]);
@@ -11,11 +12,13 @@ export default function JiraTrackerPanel() {
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [options, setOptions] = useState({ allAssignees: false, hideOther: true });
+  const [product, setProduct] = useState(DEFAULT_PRODUCT);
 
   useEffect(() => {
     StorageService.getTrackers().then(setTrackers);
     StorageService.getJiraDomain().then(setDomain);
     StorageService.getTrackerOptions().then(setOptions);
+    StorageService.getSettings().then((st) => setProduct(st.product));
   }, []);
 
   const toggleOption = (key) => {
@@ -105,7 +108,7 @@ export default function JiraTrackerPanel() {
             value={input}
             onChange={(e) => { setInput(e.target.value); setError(''); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
-            placeholder="27643, UP-68179, or board URL"
+            placeholder={`27643, ${getProduct(product).projectKey}-68179, or board URL`}
             className="w-40 px-2 py-1 rounded border border-slate-200 bg-slate-50 text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:bg-white"
           />
           <button
@@ -260,15 +263,17 @@ function TrackerRow({
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
 
+  // Trackers saved before multi-product support have no projectKey → Core (UP).
+  const projectKey = tracker.projectKey || getProduct(DEFAULT_PRODUCT).projectKey;
   let trackerUrl;
   if (tracker.url) {
     trackerUrl = tracker.url;
   } else if (tracker.type === 'epic') {
     trackerUrl = `https://${domain}/browse/${tracker.id}`;
   } else if (tracker.type === 'board') {
-    trackerUrl = `https://${domain}/jira/software/c/projects/UP/boards/${tracker.id}`;
+    trackerUrl = `https://${domain}/jira/software/c/projects/${projectKey}/boards/${tracker.id}`;
   } else {
-    trackerUrl = `https://${domain}/projects/UP/versions/${tracker.id}`;
+    trackerUrl = `https://${domain}/projects/${projectKey}/versions/${tracker.id}`;
   }
 
   const load = () => {
@@ -466,20 +471,15 @@ function TrackerRow({
   );
 }
 
-// Hardcoded fix-version choices for the Create-Task form, sourced from the
-// `recommend/fields` API response on everfit.atlassian.net.
-const FIX_VERSION_OPTIONS = [
-  { id: '12023', label: 'To be confirmed' },
-  { id: '10244', label: 'N/A' },
-];
-
 function CreateTaskForm({ epicKey, onCancel, onCreated }) {
   const [issueType, setIssueType] = useState('Task');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [storyPoints, setStoryPoints] = useState('0.5');
   const [priority, setPriority] = useState('Medium');
-  const [fixVersionId, setFixVersionId] = useState(FIX_VERSION_OPTIONS[0].id);
+  // Fix-version ids are per Jira project; derive from the Epic's key.
+  const fixVersionOptions = getProductByProjectKey(epicKey.split('-')[0]).fixVersionOptions;
+  const [fixVersionId, setFixVersionId] = useState(fixVersionOptions[0].id);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -577,7 +577,7 @@ function CreateTaskForm({ epicKey, onCancel, onCreated }) {
             onChange={(e) => setFixVersionId(e.target.value)}
             className="px-1.5 py-1 rounded border border-slate-200 bg-white text-[12px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
           >
-            {FIX_VERSION_OPTIONS.map((opt) => (
+            {fixVersionOptions.map((opt) => (
               <option key={opt.id} value={opt.id}>{opt.label}</option>
             ))}
           </select>

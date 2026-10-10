@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { StorageService, DEFAULT_FORMAT } from '../../services/storage.js';
 
-export default function TemplateSelector({ selectedId, onSelect }) {
+// The selected template is the one marked `isDefault` — report generation uses it.
+export default function TemplateSelector({ onSelect = () => {} }) {
   const [templates, setTemplates] = useState([]);
   const [editing, setEditing] = useState(null);
   const [showEditor, setShowEditor] = useState(false);
 
   useEffect(() => {
-    StorageService.getTemplates().then((t) => {
-      setTemplates(t);
-      if (!selectedId && t.length > 0) {
-        onSelect(t.find((tpl) => tpl.isDefault)?.id || t[0].id);
-      }
-    });
+    StorageService.getTemplates().then(setTemplates);
   }, []);
+
+  const selectedId = (templates.find((t) => t.isDefault) || templates[0])?.id || '';
 
   const handleSave = async (template) => {
     let updated;
@@ -39,7 +37,6 @@ export default function TemplateSelector({ selectedId, onSelect }) {
     const updated = templates.filter((t) => t.id !== id);
     setTemplates(updated);
     await StorageService.saveTemplates(updated);
-    if (selectedId === id && updated.length > 0) onSelect(updated[0].id);
   };
 
   return (
@@ -50,8 +47,8 @@ export default function TemplateSelector({ selectedId, onSelect }) {
       <div className="flex gap-1.5">
         <select
           id="template-select"
-          value={selectedId || ''}
-          onChange={(e) => onSelect(e.target.value)}
+          value={selectedId}
+          onChange={(e) => handleSetDefault(e.target.value)}
           className="flex-1 min-w-0 px-2.5 py-2 rounded border border-slate-200 bg-slate-50 text-slate-800 text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         >
           {templates.map((t) => (

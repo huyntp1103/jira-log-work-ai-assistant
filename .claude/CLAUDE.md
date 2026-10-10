@@ -33,7 +33,8 @@ Tab order (left → right) and default: **Jira Tasks** (default) | **GitHub Sync
    - **Tracker header:** chevron + type badge toggles expand; the tracker label itself is a link that opens it in Jira; refresh + remove icons on the right. The done/total count counts rows whose raw status is `QA Success`.
    - **Per-task status pill** is a click-to-open dropdown listing the issue's Jira workflow transitions (loaded on demand via `JIRA_TRANSITIONS_LIST`); selecting one calls `JIRA_TRANSITION_EXECUTE` and reloads the tracker.
    - **Create task in an Epic:** Epic trackers show a `+` button in the header. It expands an inline form scoped to that Epic with fields: **Type** (Task / Bug, default Task), **Title** (required), **Description** (optional), **Story Points** (default `0.5`), **Priority** (Highest / High / Medium / Low / Lowest, default Medium), **Fix versions** (default "To be confirmed", or "N/A" — see below). The assignee is auto-set to the current Jira user, and the new ticket is linked to the Epic via the `parent` field. On submit, the worker calls `JIRA_ISSUE_CREATE` and the tracker reloads so the new ticket appears.
-   - Default project key for bare-number lookups is hardcoded `UP`.
+   - **Product selector** (Settings → Product, persisted as `settings.product`: `core` | `marketplace`; missing → `core`). Drives the project key used for bare numbers: Core → `UP`, Marketplace → `MP` (typing `9665` → `MP-9665`). A full key (`UP-1`) always wins. All per-product values live in `src/utils/product.js` (`PRODUCTS`, `getProduct`, `getProductByProjectKey`, `resolveTicketKey`).
+   - Trackers store `projectKey` at detect time (used for board/version links); old trackers without it fall back to `UP`.
    - Default Jira domain (when none has been captured from a tab yet) is hardcoded `everfit.atlassian.net` in `StorageService.getJiraDomain`.
 
 2. **GitHub Sync** — Auto-create Jira worklogs from GitHub activity.
@@ -41,6 +42,7 @@ Tab order (left → right) and default: **Jira Tasks** (default) | **GitHub Sync
    - Deduplication: existing worklogs prefixed with `[Tool]` are filtered out before the preview is shown and re-checked at sync time.
    - **PR-event ID priority:** `title` > `head.ref` (branch) > PR body. Title wins outright when it contains any `XX-NNN`, so a branch-only ID never gets picked up alongside.
    - **Push/Create branch-name override:** a pre-pass over the same batch builds a `branch → title-IDs` map from PR/Review events. Push and Create events on those branches use the PR title's IDs (plus any IDs explicitly typed into commit messages) instead of mining the branch name. So a PR titled `UP-70323 ...` on branch `feat/UP-70470-2` resolves to `UP-70323`, not `UP-70470`.
+   - Tickets not in the selected product's project (`UP-` vs `MP-`) are dropped from the preview.
    - PR-body fallback (only used when both title and branch produce no IDs, common for `PullRequestReviewEvent`): the worker fetches the PR and scans `title + body`, with per-URL caching.
 
 3. **Daily Report** — AI-formatted daily report for Slack/etc.
@@ -156,11 +158,14 @@ The `assignee` clause is dropped when the **All assignees** toggle is on.
 - **Epic linkage** uses `fields.parent.key = epicKey` (Jira Cloud's modern Epic link). The old `customfield_10008` is not used.
 - **Story Points** uses the configured `settings.spField` (default `customfield_10014`); UI default is `0.5`.
 - **Priority** is sent as `fields.priority.name` (e.g. `"Medium"`).
-- **Fix versions** is a hardcoded two-option dropdown in the form, sourced from the Atlassian "recommend/fields" API response observed on `everfit.atlassian.net`:
+- **Fix versions** is a per-product two-option dropdown (`PRODUCTS[*].fixVersionOptions`, picked by the Epic's project key), originally sourced from the Atlassian "recommend/fields" API response observed on `everfit.atlassian.net`:
   - `12023` → `"To be confirmed"` (default)
   - `10244` → `"N/A"`
   These ids are environment-specific (Everfit's `UP` project). If the extension is ever used in another Jira tenant, the constants in `JiraTrackerPanel.jsx` (`FIX_VERSION_OPTIONS`) need updating. The worker just forwards the picked id into `fields.fixVersions: [{ id }]`.
 - **Description** is wrapped into ADF (`type: 'doc'` / `paragraph` / `text`) before being sent.
+
+### Product scoping
+With a product selected, `ReportEngine` prefixes both its worklog query and the Plan-for-Today query with `project = {KEY} AND`. MP's "To be confirmed" fix version rotates monthly — update `PRODUCTS.marketplace.fixVersionOptions[0]` each month.
 
 ### Plan for Today JQL
 ```

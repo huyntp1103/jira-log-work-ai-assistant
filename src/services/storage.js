@@ -6,6 +6,7 @@ const DEFAULT_SETTINGS = {
   timeApprove: 900,
   timeComment: 900,
   reportEngine: 'gemini',
+  product: 'core',
 };
 
 export const DEFAULT_FORMAT = `DAILY REPORT — [Use the Report Date provided by the user, formatted as "D Mon YYYY"]
@@ -34,6 +35,36 @@ PLAN FOR TODAY
 Blocker: None (or describe blockers)
 At-risk: None (or describe risks)
 Question: None (or describe questions)`;
+
+export const MARKETPLACE_TEMPLATE_ID = 'default-backend-marketplace';
+
+export const MARKETPLACE_FORMAT = `DAILY REPORT — [D Mon YYYY]
+Name: [displayName]
+Platform: BE
+\`I've already logged the time in Jira.\`
+
+——————————————————
+DONE YESTERDAY
+• [Feature / Epic name]
+    ◦ [Jira link]|[KEY] — [what was done, one line] - \`[time]\` - [status]
+        ▪︎ PR: [link] - [short label]
+        ▪︎ Thread / Doc / Commit: [link]
+• [Others] — https://everfit.atlassian.net/browse/MP-9665|MP-9665
+    ◦ [Meeting / onboarding / support / monitoring] - \`[time]\`
+
+PROGRESS CHANGED  (only when an epic % moved)
+• [Feature / Epic name] — [Jira link]|[KEY]: X% → Y%
+
+PLAN FOR TODAY
+• [Feature / Epic name]
+    ◦ [Jira link]|[KEY] — [what you will do] - Est \`[time]\`
+• [Others] — https://everfit.atlassian.net/browse/MP-9665|MP-9665
+    ◦ [Meeting / session] - \`[time]\`
+
+——————————————————
+Blockers: None
+At-risk: None
+Questions: None`;
 
 /**
  * Platform-specific hints for the AI instruction.
@@ -162,6 +193,12 @@ const DEFAULT_TEMPLATES = [
     format: DEFAULT_FORMAT,
     isDefault: true,
   },
+  {
+    id: MARKETPLACE_TEMPLATE_ID,
+    name: 'Backend Marketplace',
+    format: MARKETPLACE_FORMAT,
+    isDefault: false,
+  },
 ];
 
 export class StorageService {
@@ -177,7 +214,12 @@ export class StorageService {
 
   static async getTemplates() {
     const result = await chrome.storage.sync.get('templates');
-    return result.templates || DEFAULT_TEMPLATES;
+    const stored = result.templates;
+    if (!stored) return DEFAULT_TEMPLATES;
+    // Built-in templates added after the user first saved their list (e.g.
+    // Backend Marketplace) are appended so existing installs pick them up.
+    const missing = DEFAULT_TEMPLATES.filter((d) => !stored.some((t) => t.id === d.id));
+    return missing.length ? [...stored, ...missing] : stored;
   }
 
   static async saveTemplates(templates) {

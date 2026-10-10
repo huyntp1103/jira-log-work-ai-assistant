@@ -64,6 +64,14 @@ describe('ReportEngine.generate', () => {
     JiraService.resolveWorklogsForDate.mockImplementation((_, issues) => Promise.resolve(issues));
   });
 
+  it('scopes both JQL queries to the project when projectKey is set', async () => {
+    JiraService.searchJql.mockResolvedValue({ issues: [] });
+    await new ReportEngine({ ...makeConfig(), projectKey: 'MP' }).generate();
+    const jqls = JiraService.searchJql.mock.calls.map((c) => c[1]);
+    expect(jqls).toHaveLength(2);
+    jqls.forEach((q) => expect(q.startsWith('project = MP AND ')).toBe(true));
+  });
+
   it('categorizes first-time logged issues as "Done Yesterday"', async () => {
     const worklogs = [
       makeWorklog('user-123', '2026-04-08T09:00:00.000+0700', 3600),

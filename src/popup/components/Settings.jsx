@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../../services/storage.js';
 import TemplateSelector from './TemplateSelector.jsx';
+import { PRODUCTS, getProduct } from '../../utils/product.js';
 
 export default function Settings({ onBack }) {
   const [settings, setSettings] = useState({
@@ -11,6 +12,7 @@ export default function Settings({ onBack }) {
     timeApprove: 900,
     timeComment: 900,
     reportEngine: 'gemini',
+    product: 'core',
   });
   const [github, setGithub] = useState({ githubToken: '', githubUsername: '', allowedRepos: '' });
   const [showKey, setShowKey] = useState(false);
@@ -83,7 +85,37 @@ export default function Settings({ onBack }) {
       {/* Templates */}
       <div className="bg-white rounded-lg border border-slate-200 p-3.5">
         <h3 className="text-[13px] font-semibold text-slate-800 mb-2.5">Templates</h3>
-        <TemplateSelector selectedId={null} onSelect={() => {}} />
+        <TemplateSelector />
+      </div>
+
+      {/* Product */}
+      <div className="bg-white rounded-lg border border-slate-200 p-3.5 space-y-2.5">
+        <div>
+          <h3 className="text-[13px] font-semibold text-slate-800">Product</h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Sets the Jira project used for bare ticket numbers (e.g. 9665 → {getProduct(settings.product).projectKey}-9665),
+            report queries, GitHub Sync and new tasks.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-lg">
+          {Object.values(PRODUCTS).map(({ id, label, projectKey }) => {
+            const active = getProduct(settings.product).id === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSettings({ ...settings, product: id })}
+                className={`py-1.5 rounded-md text-[12px] font-medium transition-all ${
+                  active
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {label} ({projectKey})
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Report Engine */}

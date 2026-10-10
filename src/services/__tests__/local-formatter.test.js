@@ -267,3 +267,39 @@ describe('LocalFormatter.formatReport', () => {
     expect(out).toContain('General Tasks');
   });
 });
+
+describe('LocalFormatter.formatReport — Backend Marketplace layout', () => {
+  const ctx = { displayName: 'Huy', platform: 'Backend', targetDate: '2026-05-18', templateId: 'default-backend-marketplace', hoursPerPoint: 4 };
+  const link = (k) => `https://everfit.atlassian.net/browse/${k}`;
+  const report = {
+    'Done Yesterday': [
+      { TaskLink: link('MP-1'), Title: 'Build API', ParentSummary: 'Feature A', TimeSeconds: 5400, Status: 'In Review', Reason: 'Implemented endpoint', Progress: '100%' },
+      { TaskLink: link('MP-9665'), Title: '[MP] General Task', ParentSummary: '[MP] General Tasks', TimeSeconds: 1800, Status: 'To Do', Reason: 'Standup', Progress: 'N/A' },
+    ],
+    'Progress Changed': [
+      { TaskLink: link('MP-1'), Title: 'Build API', ParentSummary: 'Feature A', Progress: '30% ➔ 60%' },
+      { TaskLink: link('MP-3'), Title: 'No pct', ParentSummary: 'Feature B', Progress: 'N/A' },
+    ],
+    'Plan for Today': [
+      { TaskLink: link('MP-2'), Title: 'Add tests', ParentSummary: 'Feature A', SP: 2, Progress: '50%' },
+    ],
+  };
+
+  it('renders header, Done (with Others group), Progress, Plan and footer', () => {
+    const out = LocalFormatter.formatReport(report, ctx);
+    expect(out).toContain('DAILY REPORT — 18 May 2026\nName: Huy\nPlatform: BE\n`I\'ve already logged the time in Jira.`');
+    expect(out).toContain('• Feature A\n    ◦ https://everfit.atlassian.net/browse/MP-1|MP-1 — Implemented endpoint - `1h 30m` - In Review');
+    expect(out).toContain('• Others — https://everfit.atlassian.net/browse/MP-9665|MP-9665\n    ◦ Standup - `30m`');
+    expect(out).toContain('• Feature A — https://everfit.atlassian.net/browse/MP-1|MP-1: 30% → 60%');
+    expect(out).not.toContain('MP-3');
+    // 2 SP * 50% remaining * 4h = 4h
+    expect(out).toContain('◦ https://everfit.atlassian.net/browse/MP-2|MP-2 — Add tests - Est `4h`');
+    expect(out).toMatch(/Blockers: None\nAt-risk: None\nQuestions: None$/);
+  });
+
+  it('uses the Core layout for other templates', () => {
+    const out = LocalFormatter.formatReport(report, { ...ctx, templateId: 'default-backend-core' });
+    expect(out).toContain('Platform: Backend');
+    expect(out).toContain('Blocker: None');
+  });
+});

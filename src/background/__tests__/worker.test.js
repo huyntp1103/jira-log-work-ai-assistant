@@ -16,6 +16,7 @@ vi.mock('../../services/storage.js', () => ({
     getGitHubCredentials: vi.fn(),
   },
   buildInstruction: vi.fn(() => 'system instruction'),
+  MARKETPLACE_TEMPLATE_ID: 'default-backend-marketplace',
 }));
 
 vi.mock('../../services/jira.js', () => ({
@@ -23,6 +24,9 @@ vi.mock('../../services/jira.js', () => ({
     getMyProfile: vi.fn(),
     fetchJira: vi.fn(),
     searchJql: vi.fn(),
+    getIssue: vi.fn(),
+    getVersion: vi.fn(),
+    getBoard: vi.fn(),
   },
 }));
 
@@ -44,7 +48,7 @@ vi.mock('../../services/github.js', () => ({
   },
 }));
 
-import { handleGenerateReport, handleGitHubSyncPreview, handleJiraTrackerTasks } from '../worker.js';
+import { handleGenerateReport, handleGitHubSyncPreview, handleJiraTrackerTasks, handleJiraTrackerDetect } from '../worker.js';
 import { StorageService } from '../../services/storage.js';
 import { JiraService } from '../../services/jira.js';
 import { GeminiService } from '../../services/gemini.js';
@@ -207,5 +211,52 @@ describe('handleJiraTrackerTasks — logged time', () => {
     const { rows } = await handleJiraTrackerTasks({ tracker: { type: 'epic', id: 'UP-9' } });
     expect(JiraService.searchJql.mock.calls[0][2]).toContain('timespent');
     expect(rows.map((r) => r.spentSeconds)).toEqual([5400, 0]);
+  });
+});
+
+describe('product selection', () => {
+  const epic = { fields: { summary: 'Epic' } };
+
+  it('bare number resolves to MP-<n> on Marketplace', async () => {
+    StorageService.getSettings.mockResolvedValue({ ...SETTINGS, product: 'marketplace' });
+    JiraService.getVersion.mockResolvedValue(null);
+    JiraService.getIssue.mockResolvedValue(epic);
+    const { tracker } = await handleJiraTrackerDetect({ input: '9665' });
+    expect(JiraService.getIssue).toHaveBeenCalledWith('myorg.atlassian.net', 'MP-9665', 'Epic');
+    expect(tracker).toMatchObject({ id: 'MP-9665', type: 'epic', projectKey: 'MP' });
+  });
+
+  it('bare number resolves to UP-<n> when product is missing', async () => {
+    JiraService.getVersion.mockResolvedValue(null);
+    JiraService.getIssue.mockResolvedValue(epic);
+    const { tracker } = await handleJiraTrackerDetect({ input: '9665' });
+    expect(tracker.id).toBe('UP-9665');
+  });
+
+  it('full key keeps its own project key', async () => {
+    StorageService.getSettings.mockResolvedValue({ ...SETTINGS, product: 'marketplace' });
+    JiraService.getIssue.mockResolvedValue(epic);
+    const { tracker } = await handleJiraTrackerDetect({ input: 'UP-1' });
+    expect(tracker).toMatchObject({ id: 'UP-1', projectKey: 'UP' });
+  });
+
+  it('passes the product project key to ReportEngine', async () => {
+    StorageService.getSettings.mockResolvedValue({ ...SETTINGS, product: 'marketplace' });
+    await handleGenerateReport({ date: '2026-04-08', templateId: 'tpl1' });
+    expect(ReportEngine.mock.calls[0][0].projectKey).toBe('MP');
+  });
+
+  it('GitHub Sync drops tickets from the other product', async () => {
+    StorageService.getSettings.mockResolvedValue({ ...SETTINGS, product: 'marketplace' });
+    StorageService.getGitHubCredentials.mockResolvedValue({ githubToken: 't', githubUsername: 'u', allowedRepos: '' });
+    GitHubService.fetchEventsForDate.mockResolvedValue([{ type: 'PushEvent', payload: {}, created_at: '2026-04-08T01:00:00Z' }]);
+    GitHubService.extractTicketMap.mockResolvedValue(new Map([
+      ['UP-1', { seconds: 60, description: 'x' }],
+      ['MP-2', { seconds: 60, description: 'y' }],
+    ]));
+    GitHubService.isSynced.mockResolvedValue(false);
+    JiraService.fetchJira.mockResolvedValue({ fields: { summary: 's' } });
+    const { rows } = await handleGitHubSyncPreview({ date: '2026-04-08' });
+    expect(rows.map((r) => r.key)).toEqual(['MP-2']);
   });
 });

@@ -10,14 +10,16 @@ export class ReportEngine {
    * @param {string} config.targetDate - YYYY-MM-DD worklog date
    * @param {Date}   config.baseDate - Base date for 14-day recency filter
    * @param {string} config.spField - Story point custom field ID
+   * @param {string} [config.projectKey] - Scope queries to this Jira project (selected product)
    * @param {number} config.hoursPerPoint - Hours per story point
    */
-  constructor({ domain, myId, targetDate, baseDate, spField, hoursPerPoint }) {
+  constructor({ domain, myId, targetDate, baseDate, spField, hoursPerPoint, projectKey }) {
     this.domain = domain;
     this.myId = myId;
     this.targetDate = targetDate;
     this.baseDate = baseDate;
     this.spField = spField;
+    this.projectKey = projectKey;
     this.hoursPerPoint = hoursPerPoint;
     this.report = {
       'Done Yesterday': [],
@@ -33,15 +35,17 @@ export class ReportEngine {
 
     const fields = ['summary', 'status', 'issuetype', 'worklog', 'timetracking', 'parent', this.spField];
 
+    const projectClause = this.projectKey ? `project = ${this.projectKey} AND ` : '';
+
     const [logData, planData] = await Promise.all([
       JiraService.searchJql(
         this.domain,
-        `worklogAuthor = currentUser() AND worklogDate = "${this.targetDate}"`,
+        `${projectClause}worklogAuthor = currentUser() AND worklogDate = "${this.targetDate}"`,
         fields
       ),
       JiraService.searchJql(
         this.domain,
-        `assignee = currentUser() AND sprint != NULL AND status = "In Progress"`,
+        `${projectClause}assignee = currentUser() AND sprint != NULL AND status = "In Progress"`,
         fields
       ),
     ]);
@@ -103,6 +107,7 @@ export class ReportEngine {
         Title: issue.fields.summary,
         ParentSummary: getParentSummary(issue),
         Time: (secondsOnTarget / 3600).toFixed(2) + 'h',
+        TimeSeconds: secondsOnTarget,
         Progress: calculateProgress(totalSpentSeconds, secondsOnTarget, sp, this.hoursPerPoint, issue.fields.status.name),
         Status: issue.fields.status.name,
         Reason: reason,

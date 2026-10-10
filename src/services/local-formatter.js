@@ -1,5 +1,7 @@
 import { DateHelper } from '../utils/date.js';
-import { getAiUsage } from './storage.js';
+import { getAiUsage, MARKETPLACE_TEMPLATE_ID } from './storage.js';
+import { PRODUCTS } from '../utils/product.js';
+import { fmtTime } from '../utils/time.js';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -131,6 +133,110 @@ function formatCategory(title, rows, lineFormatter) {
   return parts.join('\n');
 }
 
+// ─── Backend Marketplace layout ──────────────────────────────────────────────
+
+const MP_OTHERS_KEY = PRODUCTS.marketplace.othersTicketKey;
+
+function keyOf(row) {
+  return (row.TaskLink || '').match(/[A-Z][A-Z0-9]*-\d+/)?.[0] || '';
+}
+
+// Slack-style "url|KEY" reference, as used by the Marketplace template.
+function linkRef(row) {
+  return `${row.TaskLink}|${keyOf(row)}`;
+}
+
+function timeLabel(seconds) {
+  return seconds > 0 ? `\`${fmtTime(seconds)}\`` : '`<fill in time>`';
+}
+
+function mpDescription(row) {
+  return (row.Reason || '').trim() || row.Title;
+}
+
+function mpOthersHeader(domainLink) {
+  return `• Others — ${domainLink}|${MP_OTHERS_KEY}`;
+}
+
+/**
+ * Build "• Feature" groups (+ trailing "• Others" group) for a category.
+ * `line(row)` renders the `◦` line; the Others ticket is pulled into its own group.
+ */
+function mpGroups(rows, line, othersLine) {
+  const out = [];
+  const others = [];
+  const features = new Map();
+  for (const row of rows || []) {
+    if (keyOf(row) === MP_OTHERS_KEY) {
+      others.push(row);
+      continue;
+    }
+    const parent = row.ParentSummary || 'General Tasks';
+    if (!features.has(parent)) features.set(parent, []);
+    features.get(parent).push(row);
+  }
+  for (const [parent, list] of features) {
+    out.push(`• ${parent}`);
+    list.forEach((r) => out.push(`    ◦ ${line(r)}`));
+  }
+  for (const row of others) {
+    out.push(mpOthersHeader(row.TaskLink));
+    out.push(`    ◦ ${othersLine(row)}`);
+  }
+  return out;
+}
+
+function mpEstimate(row, hoursPerPoint) {
+  const pct = parsePercent(row.Progress);
+  if (!row.SP || row.SP <= 0 || pct == null) return '`<fill in time>`';
+  const seconds = Math.round(row.SP * (Math.max(0, 100 - pct) / 100) * hoursPerPoint * 3600);
+  return timeLabel(seconds);
+}
+
+function formatMarketplace(report, { displayName, targetDate, hoursPerPoint = 4 }) {
+  const header = [
+    `DAILY REPORT — ${formatHumanDate(targetDate)}`,
+    `Name: ${displayName || 'Unknown'}`,
+    'Platform: BE',
+    "`I've already logged the time in Jira.`",
+    '',
+    '——————————————————',
+  ].join('\n');
+
+  const sections = [];
+
+  const done = report?.['Done Yesterday'] || [];
+  if (done.length) {
+    sections.push(['DONE YESTERDAY', ...mpGroups(
+      done,
+      (r) => `${linkRef(r)} — ${mpDescription(r)} - ${timeLabel(r.TimeSeconds)} - ${r.Status || 'N/A'}`,
+      (r) => `${mpDescription(r)} - ${timeLabel(r.TimeSeconds)}`,
+    )].join('\n'));
+  }
+
+  // Progress is tracked per task; only rows whose % actually moved are listed.
+  const moved = (report?.['Progress Changed'] || []).filter((r) => /%/.test(r.Progress || '') && r.Progress !== 'N/A');
+  if (moved.length) {
+    const lines = ['PROGRESS CHANGED'];
+    for (const r of moved) {
+      lines.push(`• ${r.ParentSummary || 'General Tasks'} — ${linkRef(r)}: ${r.Progress.replace(/➔|->/g, '→')}`);
+    }
+    sections.push(lines.join('\n'));
+  }
+
+  const plan = report?.['Plan for Today'] || [];
+  if (plan.length) {
+    sections.push(['PLAN FOR TODAY', ...mpGroups(
+      plan,
+      (r) => `${linkRef(r)} — ${r.Title} - Est ${mpEstimate(r, hoursPerPoint)}`,
+      (r) => `${r.Title} - ${mpEstimate(r, hoursPerPoint)}`,
+    )].join('\n'));
+  }
+
+  const footer = ['——————————————————', 'Blockers: None', 'At-risk: None', 'Questions: None'].join('\n');
+  return [`${header}\n${sections.join('\n\n')}`, footer].join('\n\n');
+}
+
 export class LocalFormatter {
   /**
    * Render a categorised report (the JSON `ReportEngine.generate()` returns)
@@ -141,8 +247,13 @@ export class LocalFormatter {
    * @param {string} context.displayName
    * @param {string} context.platform - e.g. "Backend", "QA"
    * @param {string} context.targetDate - report date in YYYY-MM-DD
+   * @param {string} [context.templateId] - `default-backend-marketplace` selects the Marketplace layout
+   * @param {number} [context.hoursPerPoint] - used for the Marketplace "Est" time
    */
-  static formatReport(report, { displayName, platform, targetDate }) {
+  static formatReport(report, { displayName, platform, targetDate, templateId, hoursPerPoint }) {
+    if (templateId === MARKETPLACE_TEMPLATE_ID) {
+      return formatMarketplace(report, { displayName, targetDate, hoursPerPoint });
+    }
     const header = [
       `DAILY REPORT — ${formatHumanDate(targetDate)}`,
       `Name: ${displayName || 'Unknown'}`,
