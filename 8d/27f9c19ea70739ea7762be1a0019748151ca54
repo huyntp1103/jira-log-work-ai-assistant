@@ -1,0 +1,61 @@
+src/popup/components/Settings.jsx
+  s_7f087eaf97aef9::t_c14620d1ce6be9 4,15,89-118
+  s_7f087eaf97aef9::t_4d1c3dcd7f232f 88
+src/utils/product.js
+  s_7f087eaf97aef9::t_de7094f26fb4c8 38-43
+  s_7f087eaf97aef9::t_e684083c3f3414 22-23
+  s_7f087eaf97aef9::t_b6c6e36de3c476 1-21,24-37,44-56
+src/background/__tests__/worker.test.js
+  s_7f087eaf97aef9::t_52743e205cf46f 19
+  s_7f087eaf97aef9::t_79b6e404180751 27-29,51,216-261
+  s_7f087eaf97aef9::t_dcf034c82f1c27 262
+src/services/storage.js
+  s_7f087eaf97aef9::t_b6c6e36de3c476 9
+  s_7f087eaf97aef9::t_e684083c3f3414 39-68,196-201,217-222
+src/popup/components/WorklogPreview.jsx
+  s_7f087eaf97aef9::t_277dae2f595b43 9,25-30,104,157,405,491
+  s_7f087eaf97aef9::t_c14620d1ce6be9 106,159
+  s_7f087eaf97aef9::t_32b7c0d6bb8381 3-4
+src/utils/__tests__/product.test.js
+  s_7f087eaf97aef9::t_79b6e404180751 1-37
+.claude/CLAUDE.md
+  s_7f087eaf97aef9::t_9cb38e929dd116 36-37,45,161,167-168
+  s_7f087eaf97aef9::t_ef927453a897bb 169
+src/services/local-formatter.js
+  s_7f087eaf97aef9::t_e684083c3f3414 2-4,136-239,250-251,253-256
+src/services/__tests__/local-formatter.test.js
+  s_7f087eaf97aef9::t_fc09ebb1433a28 270-305
+src/services/__tests__/report-engine.test.js
+  s_7f087eaf97aef9::t_9cb38e929dd116 67-74
+src/services/report-engine.js
+  s_7f087eaf97aef9::t_e684083c3f3414 110
+  s_7f087eaf97aef9::t_32b7c0d6bb8381 13,16,22,38-39,43,48
+src/popup/components/TemplateSelector.jsx
+  s_7f087eaf97aef9::t_4d1c3dcd7f232f 4-5,11,14-15,50-51
+src/services/__tests__/storage.test.js
+  s_7f087eaf97aef9::t_fc09ebb1433a28 1-2,107-122
+  s_7f087eaf97aef9::t_b4bf39f31db27c 123
+src/popup/components/JiraTrackerPanel.jsx
+  s_7f087eaf97aef9::t_de7094f26fb4c8 4,15,21,111,266-267,274,276,480-482,580
+src/background/worker.js
+  s_7f087eaf97aef9::t_e684083c3f3414 176-177
+  s_7f087eaf97aef9::t_b6c6e36de3c476 197,201-202,209,220,236,244,254,264,272
+  s_7f087eaf97aef9::t_32b7c0d6bb8381 8,160,198,520-525
+  s_7f087eaf97aef9::t_fb12976e0e3dd5 526
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8d27f9c19ea70739ea7762be1a0019748151ca54",
+  "prompts": {},
+  "sessions": {
+    "s_7f087eaf97aef9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bbacfcb5-8b13-44d3-8fcf-7ea7678e7870",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Huy Nguyen Nhat <huyntp1103@gmail.com>"
+    }
+  }
+}
